@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { type DashboardStats, type Order } from '../types/dashboard'; // <- tanpa "type"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://172.168.0.19:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://hlb.railway.internal/api';
 
 const api = axios.create({
     baseURL: API_BASE_URL,

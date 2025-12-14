@@ -5,6 +5,7 @@ import Layout from './components/layout/Layout';
 import Dashboard from './components/dashboard/Dashboard';
 import CustomerIndex from './components/customers/CustomerIndex';
 import InstallButton from './components/pwa/InstallButton';
+import OrderIndex from './components/orders/OrderIndex';
 
 
 const App: React.FC = () => {
@@ -15,6 +16,7 @@ const App: React.FC = () => {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/customers" element={<CustomerIndex />} />
+          <Route path="/orders" element={<OrderIndex />} />
           <Route path="/orders" element={
             <div className="p-8 text-center">
               <h2 className="text-2xl font-bold text-gray-800 mb-4">Orders Page</h2>
