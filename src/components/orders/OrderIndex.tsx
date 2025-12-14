@@ -1,5 +1,5 @@
 // src/components/orders/OrderIndex.tsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { 
     List, 
     Search, 
@@ -33,10 +33,20 @@ const OrderIndex: React.FC = () => {
         deleteOrder,
     } = useOrderStore();
 
-    useEffect(() => {
+    // Gunakan useCallback untuk menghindari re-render berlebihan
+    const loadData = useCallback(() => {
         fetchOrders();
         fetchStats();
     }, [fetchOrders, fetchStats]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    // Handler untuk filter search dengan debounce
+    const handleSearchChange = useCallback((value: string) => {
+        setFilters({ search: value });
+    }, [setFilters]);
 
     const statusOptions = [
         { value: '', label: 'Semua Status' },
@@ -109,10 +119,10 @@ const OrderIndex: React.FC = () => {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-blue-500 bg-linear-to-br from-blue-500 to-blue-600 rounded-lg shadow-md">
+                <div className="p-2 bg-blue-500 rounded-lg shadow-md">
                     <List className="w-6 h-6 text-white" />
                 </div>
-                <h1 className="text-2xl font-bold text-blue-700 bg-linear-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold text-blue-700">
                     Daftar Order
                 </h1>
             </div>
@@ -151,7 +161,7 @@ const OrderIndex: React.FC = () => {
                     <input
                         type="text"
                         value={filters.search}
-                        onChange={(e) => setFilters({ search: e.target.value })}
+                        onChange={(e) => handleSearchChange(e.target.value)}
                         placeholder="Cari order (No. Order / Nama Pelanggan)..."
                         className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
                     />
@@ -199,7 +209,7 @@ const OrderIndex: React.FC = () => {
             {/* Create New Order Button */}
             <Link
                 to="/orders/create"
-                className="inline-flex w-full bg-blue-500 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                className="inline-flex w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition duration-200 items-center justify-center gap-2 shadow-md hover:shadow-lg"
             >
                 <Plus className="w-5 h-5" />
                 Buat Order Baru
@@ -207,7 +217,7 @@ const OrderIndex: React.FC = () => {
 
             {/* Error Message */}
             {error && (
-                <div className="bg-red-50 bg-linear-to-r from-red-50 to-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2">
                     <AlertCircle className="w-5 h-5" />
                     {error}
                 </div>
@@ -246,7 +256,7 @@ const OrderIndex: React.FC = () => {
                     </p>
                     <Link
                         to="/orders/create"
-                        className="bg-blue-500 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 inline-flex items-center gap-2 shadow-md hover:shadow-lg"
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200 inline-flex items-center gap-2 shadow-md hover:shadow-lg"
                     >
                         <Plus className="w-4 h-4" />
                         Buat Order Pertama
@@ -421,9 +431,9 @@ const OrderIndex: React.FC = () => {
 
             {/* Refresh Button */}
             <button
-                onClick={() => fetchOrders()}
+                onClick={() => loadData()}
                 disabled={loading}
-                className="fixed bottom-24 right-4 bg-blue-500 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-3 rounded-full shadow-lg transition duration-200 z-10 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className="fixed bottom-24 right-4 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition duration-200 z-10 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Refresh data"
             >
                 <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
