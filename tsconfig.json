@@ -1,0 +1,16 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    
+  ],
+  "compilerOptions": {
+    // Pastikan ada ini untuk import type
+    "verbatimModuleSyntax": false ,
+    // Atau untuk backward compatibility
+    "isolatedModules": true,
+    "esModuleInterop": true
+  }
+}
