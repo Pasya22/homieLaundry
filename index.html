@@ -1,69 +1,78 @@
 <!DOCTYPE html>
 <html lang="id">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" href="/Logo-min.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#0ea5e9" />
-    <meta name="description" content="Aplikasi manajemen laundry modern - Homie Laundry" />
-    <meta name="application-name" content="Homie Laundry" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Homie Laundry" />
-    <meta name="format-detection" content="telephone=no" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    
-    <!-- iOS Icons -->
-    <link rel="apple-touch-icon" href="/icon-192x192.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152x152.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/icon-167x167.png" />
-    
-    <!-- Splash Screens iOS -->
-    <link rel="apple-touch-startup-image" href="/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
-    <link rel="apple-touch-startup-image" href="/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
-    <link rel="apple-touch-startup-image" href="/splash-1242x2208.png" media="(device-width: 621px) and (device-height: 1104px) and (-webkit-device-pixel-ratio: 3)" />
-    <link rel="apple-touch-startup-image" href="/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
-    
-    <!-- Manifest -->
-    <link rel="manifest" href="/manifest.json" />
-    
-    <!-- Tailwind CSS v4.1 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: {
-                50: '#f0f9ff',
-                100: '#e0f2fe',
-                500: '#0ea5e9',
-                600: '#0284c7',
-              },
-              success: '#10b981',
-              warning: '#f59e0b',
-              danger: '#ef4444',
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/Logo-min.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <meta http-equiv="Access-Control-Allow-Origin" content="*" />
+
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#0ea5e9" />
+  <meta name="description" content="Aplikasi manajemen laundry modern - Homie Laundry" />
+  <meta name="application-name" content="Homie Laundry" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Homie Laundry" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <!-- iOS Icons -->
+  <link rel="apple-touch-icon" href="/icon-192x192.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="/icon-167x167.png" />
+
+  <!-- Splash Screens iOS -->
+  <link rel="apple-touch-startup-image" href="/splash-640x1136.png"
+    media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
+  <link rel="apple-touch-startup-image" href="/splash-750x1334.png"
+    media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+  <link rel="apple-touch-startup-image" href="/splash-1242x2208.png"
+    media="(device-width: 621px) and (device-height: 1104px) and (-webkit-device-pixel-ratio: 3)" />
+  <link rel="apple-touch-startup-image" href="/splash-1125x2436.png"
+    media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
+
+  <!-- Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Tailwind CSS v4.1 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
             },
-            animation: {
-              'pulse': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              'spin': 'spin 1s linear infinite',
-              'bounce': 'bounce 1s infinite',
-            },
-          }
+            success: '#10b981',
+            warning: '#f59e0b',
+            danger: '#ef4444',
+          },
+          animation: {
+            'pulse': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'spin': 'spin 1s linear infinite',
+            'bounce': 'bounce 1s infinite',
+          },
         }
       }
-    </script>
-    
-    <title>Homie Laundry</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- PWA Register Script -->
-    
-  </body>
+    }
+  </script>
+
+  <title>Homie Laundry</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+
+  <!-- PWA Register Script -->
+
+</body>
+
 </html>

@@ -6,43 +6,66 @@ import Dashboard from './components/dashboard/Dashboard';
 import CustomerIndex from './components/customers/CustomerIndex';
 import InstallButton from './components/pwa/InstallButton';
 import OrderIndex from './components/orders/OrderIndex';
+import CreateOrder from './components/orders/CreateOrder';
+import OrderDetail from './components/orders/OrderDetail';
+import Login from './components/auth/Login';
+import ServicesIndex from './components/services/servicesIndex';
+import ProcessIndex from './components/process/ProcessIndex';
+import { authService } from './services/authService';
+
+// Protected Route Component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  if (!authService.isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+};
+
+// Public Route Component (redirect if already authenticated)
+const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  if (authService.isAuthenticated()) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
 
 const App: React.FC = () => {
   return (
     <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/customers" element={<CustomerIndex />} />
-          <Route path="/orders" element={<OrderIndex />} />
-          <Route path="/orders/create" element={
-            <div className="p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Create Order</h2>
-              {/* <p className="text-gray-600">Coming Soon...</p> */}
-            </div>
-          } />
-          <Route path="/orders/:id" element={
-            <div className="p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Order Detail</h2>
-              {/* <p className="text-gray-600">Coming Soon...</p> */}
-            </div>
-          } />
-          <Route path="/process" element={
-            <div className="p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Process Page</h2>
-              <p className="text-gray-600">Coming Soon...</p>
-            </div>
-          } />
-          <Route path="/services" element={
-            <div className="p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Services Page</h2>
-              <p className="text-gray-600">Coming Soon...</p>
-            </div>
-          } />
-        </Routes>
-        <InstallButton />
-      </Layout>
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
+
+        {/* Protected Routes */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/customers" element={<CustomerIndex />} />
+                  <Route path="/orders" element={<OrderIndex />} />
+                  <Route path="/orders/create" element={<CreateOrder />} />
+                  <Route path="/orders/:id" element={<OrderDetail />} />
+                  <Route path="/process" element={<ProcessIndex />} />
+                  <Route path="/services" element={<ServicesIndex />} />
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                </Routes>
+                <InstallButton />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </Router>
   );
 };

@@ -10,19 +10,19 @@ const api = axios.create({
         'Content-Type': 'application/json',
         'Accept': 'application/json',
     },
-    withCredentials: true,
+    // withCredentials: true,
 });
 
-api.interceptors.response.use(
-    response => response,
-    error => {
-        if (error.response?.status === 401) {
-            // Handle unauthorized
-            window.location.href = '/login';
-        }
-        return Promise.reject(error);
-    }
-);
+// api.interceptors.response.use(
+//     response => response,
+//     error => {
+//         if (error.response?.status === 401) {
+//             // Handle unauthorized
+//             window.location.href = '/login';
+//         }
+//         return Promise.reject(error);
+//     }
+// );
 
 export const customerService = {
     async getCustomers(page = 1, perPage = 10, search = ''): Promise<PaginatedResponse<Customer>> {
