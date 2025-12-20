@@ -9,7 +9,7 @@ import {
     type OrderStatus 
 } from '../types/order';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://hlb-production.up.railway.app/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL ;
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -339,7 +339,7 @@ export const orderService = {
         }
         
         try {
-            const response = await api.get('/customers/search', { params: { search } });
+            const response = await api.get('/orders/search', { params: { search } });
             return response.data.data;
         } catch (error) {
             console.error('Error searching customers:', error);

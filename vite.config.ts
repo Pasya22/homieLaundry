@@ -62,7 +62,7 @@ export default defineConfig({
   ],
   server: {
     host: '0.0.0.0', // Allow external access
-    port: 8000,
+    port: 3000,
     // Uncomment untuk HTTPS (butuh cert)
     // https: {
     //   key: fs.readFileSync(path.resolve(__dirname, 'localhost-key.pem')),
@@ -71,6 +71,6 @@ export default defineConfig({
   },
   preview: {
     host: '0.0.0.0',
-    port: 8000
+    port: 3000
   }
 });

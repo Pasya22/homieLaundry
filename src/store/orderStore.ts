@@ -1,7 +1,7 @@
 // src/store/orderStore.ts
 import { create } from 'zustand';
 import { orderService } from '../services/orderService';
-import { type Order, type OrderStore } from '../types/order';
+import { type Order, type OrderStore, type Service } from '../types/order';
 
 const initialCreateOrderState: OrderStore['createOrder'] = {
     step: 1,
@@ -24,6 +24,49 @@ const initialCreateOrderState: OrderStore['createOrder'] = {
     total: 0,
     totalWeight: 0,
     totalItems: 0,
+};
+
+// Helper function untuk mencari service berdasarkan ID
+const findServiceById = (services: Service[] | Record<string, Service[]>, id: number): Service | undefined => {
+    // Jika services adalah array
+    if (Array.isArray(services)) {
+        return services.find(s => s.id === id);
+    }
+    
+    // Jika services adalah object yang dikelompokkan
+    if (typeof services === 'object' && services !== null) {
+        // Cari di semua kategori
+        for (const category in services) {
+            const categoryServices = services[category];
+            if (Array.isArray(categoryServices)) {
+                const found = categoryServices.find(s => s.id === id);
+                if (found) return found;
+            }
+        }
+    }
+    
+    return undefined;
+};
+
+// Helper function untuk mendapatkan semua services dalam bentuk array
+const getAllServices = (services: Service[] | Record<string, Service[]>): Service[] => {
+    // Jika services adalah array
+    if (Array.isArray(services)) {
+        return services;
+    }
+    
+    // Jika services adalah object yang dikelompokkan
+    if (typeof services === 'object' && services !== null) {
+        const allServices: Service[] = [];
+        Object.values(services).forEach(categoryServices => {
+            if (Array.isArray(categoryServices)) {
+                allServices.push(...categoryServices);
+            }
+        });
+        return allServices;
+    }
+    
+    return [];
 };
 
 export const useOrderStore = create<OrderStore>((set, get) => ({
@@ -137,10 +180,26 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     fetchServices: async () => {
         try {
             const services = await orderService.getServices();
+            
+            // Log untuk debugging
+            console.log('Services from API:', services);
+            console.log('Is array?', Array.isArray(services));
+            
             set({ services });
         } catch (error: any) {
             console.error('Error fetching services:', error);
         }
+    },
+
+    // Helper functions yang bisa dipanggil dari komponen
+    findServiceById: (id: number) => {
+        const { services } = get();
+        return findServiceById(services, id);
+    },
+
+    getAllServices: () => {
+        const { services } = get();
+        return getAllServices(services);
     },
 
     // Order Actions
@@ -259,7 +318,9 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         set(state => {
             const createOrder = { ...state.createOrder };
             const serviceIndex = createOrder.selectedServices.indexOf(serviceId);
-            const service = state.services.find(s => s.id === serviceId);
+            
+            // Gunakan helper function untuk mencari service
+            const service = findServiceById(state.services, serviceId);
             
             if (serviceIndex === -1) {
                 // Add service
@@ -350,7 +411,8 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         let totalItems = 0;
         
         createOrder.selectedServices.forEach(serviceId => {
-            const service = services.find(s => s.id === serviceId);
+            // Gunakan helper function untuk mencari service
+            const service = findServiceById(services, serviceId);
             if (!service) return;
             
             const price = isMember && service.member_price ? service.member_price : service.price;

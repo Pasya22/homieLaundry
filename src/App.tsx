@@ -9,6 +9,7 @@ import OrderIndex from './components/orders/OrderIndex';
 import CreateOrder from './components/orders/CreateOrder';
 import OrderDetail from './components/orders/OrderDetail';
 import Login from './components/auth/Login';
+import Profile from './components/profile/Profile';
 import ServicesIndex from './components/services/servicesIndex';
 import ProcessIndex from './components/process/ProcessIndex';
 import { authService } from './services/authService';
@@ -58,6 +59,7 @@ const App: React.FC = () => {
                   <Route path="/orders/:id" element={<OrderDetail />} />
                   <Route path="/process" element={<ProcessIndex />} />
                   <Route path="/services" element={<ServicesIndex />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
                 <InstallButton />

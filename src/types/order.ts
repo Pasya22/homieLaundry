@@ -101,7 +101,7 @@ export interface OrderStore {
     currentOrder: Order | null;
     stats: OrderStats;
     customers: Customer[];
-    services: Service[];
+    services: Service[] | Record<string, Service[]>; // Update tipe ini
     loading: boolean;
     error: string | null;
     pagination: {
@@ -143,13 +143,14 @@ export interface OrderStore {
     // Actions
     setFilters: (filters: Partial<OrderStore['filters']>) => void;
     setPage: (page: number) => void;
-    
+
     // API Actions
     fetchOrders: () => Promise<void>;
     fetchOrder: (id: number) => Promise<void>;
     fetchStats: () => Promise<void>;
     fetchCustomers: (search?: string) => Promise<void>;
     fetchServices: () => Promise<void>;
+
     
     // Order Actions
     createNewOrder: (data: CreateOrderData) => Promise<Order>;

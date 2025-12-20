@@ -18,7 +18,6 @@ const CreateOrder: React.FC = () => {
         fetchServices,
         selectCustomer,
         setNewCustomer,
-        // setCreateStep,
         toggleService,
         updateServiceQuantity,
         updateServiceWeight,
@@ -26,23 +25,23 @@ const CreateOrder: React.FC = () => {
         setOrderNotes,
         setPaymentMethod,
         setEstimatedCompletion,
-        // calculateTotals,
         proceedToNextStep,
         goToPrevStep,
         createNewOrder,
         resetCreateOrder,
-        // validateStep,
     } = useOrderStore();
 
     const [customerSearch, setCustomerSearch] = useState('');
-    // const [serviceSearch, setServiceSearch] = useState('');
 
     useEffect(() => {
         if (createOrder.step === 1) {
             fetchCustomers(customerSearch);
         }
         if (createOrder.step === 2) {
-            fetchServices();
+            // Cek apakah services sudah di-load
+            if (!services || Object.keys(services).length === 0) {
+                fetchServices();
+            }
         }
     }, [createOrder.step, customerSearch]);
 
@@ -65,8 +64,26 @@ const CreateOrder: React.FC = () => {
         return createOrder.selectedServices.length;
     };
 
+    // Helper function untuk mendapatkan semua services dari object yang dikelompokkan
+    const getAllServices = (): Service[] => {
+        if (!services) return [];
+        
+        // Jika services adalah object yang sudah dikelompokkan
+        if (typeof services === 'object' && !Array.isArray(services)) {
+            // Flatten object menjadi array
+            return Object.values(services).flat() as Service[];
+        }
+        
+        // Jika services adalah array
+        if (Array.isArray(services)) {
+            return services;
+        }
+        
+        return [];
+    };
+
     const getServiceById = (id: number): Service | undefined => {
-        return services.find(s => s.id === id);
+        return getAllServices().find(s => s.id === id);
     };
 
     const getServiceUnit = (service: Service) => {
@@ -254,338 +271,429 @@ const CreateOrder: React.FC = () => {
         </div>
     );
 
-    const renderStep2 = () => (
-        <div className="space-y-6">
-            <h2 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
-                <ShoppingBag className="w-5 h-5" />
-                Pilih Layanan
-            </h2>
+    const renderStep2 = () => {
+        console.log('=== DEBUG renderStep2 ===');
+        console.log('services:', services);
+        console.log('typeof services:', typeof services);
+        console.log('Array.isArray(services):', Array.isArray(services));
 
-            <p className="text-gray-600">
-                Pelanggan: <span className="font-semibold">{getSelectedCustomerName()}</span>
-            </p>
-
-            {createOrder.selectedCustomer?.type === 'member' && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-green-800 font-medium">Member Benefit Active!</p>
-                    <p className="text-sm text-green-700">Customer mendapatkan harga khusus member</p>
+        if (loading) {
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
+                        <ShoppingBag className="w-5 h-5" />
+                        Pilih Layanan
+                    </h2>
+                    <div className="text-center py-8">
+                        <p className="text-gray-500">Memuat layanan...</p>
+                    </div>
                 </div>
-            )}
+            );
+        }
 
+        if (!services) {
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
+                        <ShoppingBag className="w-5 h-5" />
+                        Pilih Layanan
+                    </h2>
+                    <div className="text-center py-8">
+                        <p className="text-gray-500">Menunggu data layanan...</p>
+                        <button 
+                            onClick={() => fetchServices()}
+                            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        >
+                            Muat Ulang
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // Fungsi untuk mendapatkan grouped services
+        const getGroupedServices = () => {
+            // Jika services sudah dikelompokkan (object)
+            if (typeof services === 'object' && !Array.isArray(services)) {
+                return services;
+            }
+            // Jika services masih array, group dulu
+            if (Array.isArray(services)) {
+                return services.reduce((acc: Record<string, Service[]>, service) => {
+                    if (!acc[service.category]) {
+                        acc[service.category] = [];
+                    }
+                    acc[service.category].push(service);
+                    return acc;
+                }, {});
+            }
+            // Default empty object
+            return {};
+        };
+
+        const groupedServices = getGroupedServices();
+        const totalServices = getAllServices().length;
+
+        return (
             <div className="space-y-6">
-                {Object.entries(
-                    services.reduce((acc: Record<string, Service[]>, service) => {
-                        if (!acc[service.category]) {
-                            acc[service.category] = [];
-                        }
-                        acc[service.category].push(service);
-                        return acc;
-                    }, {})
-                ).map(([category, categoryServices]) => (
-                    <div key={category}>
-                        <h3 className="text-md font-semibold text-gray-700 mb-3">{category}</h3>
-                        <div className="space-y-3">
-                            {categoryServices.map(service => (
-                                <div
-                                    key={service.id}
-                                    className={`border rounded-lg p-4 transition duration-150 ${createOrder.selectedServices.includes(service.id)
-                                            ? 'border-blue-500 bg-blue-50'
-                                            : 'border-gray-200 hover:border-blue-300'
-                                        }`}
-                                >
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div className="flex-1">
-                                            <h4 className="font-medium text-gray-900">{service.name}</h4>
-                                            <p className="text-sm text-gray-600">{service.duration}</p>
-                                            <p className="text-xs text-gray-500">{service.description}</p>
+                <h2 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
+                    <ShoppingBag className="w-5 h-5" />
+                    Pilih Layanan
+                </h2>
 
-                                            <div className="mt-2">
-                                                {createOrder.selectedCustomer?.type === 'member' && service.member_price ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-lg font-bold text-green-600">
-                                                            {formatCurrency(service.member_price)}/{getServiceUnit(service)}
-                                                        </span>
-                                                        <span className="text-sm text-gray-500 line-through">
-                                                            {formatCurrency(service.price)}
-                                                        </span>
-                                                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                                                            Member
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-lg font-bold text-green-600">
-                                                        {formatCurrency(service.price)}/{getServiceUnit(service)}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
+                <p className="text-gray-600">
+                    Pelanggan: <span className="font-semibold">{getSelectedCustomerName()}</span>
+                </p>
 
-                                        <button
-                                            onClick={() => toggleService(service.id)}
-                                            disabled={loading}
-                                            className={`px-4 py-2 text-sm rounded transition duration-200 ${createOrder.selectedServices.includes(service.id)
-                                                    ? 'bg-red-500 hover:bg-red-600 text-white'
-                                                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                {createOrder.selectedCustomer?.type === 'member' && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p className="text-green-800 font-medium">Member Benefit Active!</p>
+                        <p className="text-sm text-green-700">Customer mendapatkan harga khusus member</p>
+                    </div>
+                )}
+
+                {totalServices === 0 ? (
+                    <div className="text-center py-8">
+                        <p className="text-gray-500">Tidak ada layanan tersedia</p>
+                        <button 
+                            onClick={() => fetchServices()}
+                            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        >
+                            Muat Ulang
+                        </button>
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        {Object.entries(groupedServices).map(([category, categoryServices]) => (
+                            <div key={category}>
+                                <h3 className="text-md font-semibold text-gray-700 mb-3">{category}</h3>
+                                <div className="space-y-3">
+                                    {(categoryServices as Service[]).map(service => (
+                                        <div
+                                            key={service.id}
+                                            className={`border rounded-lg p-4 transition duration-150 ${createOrder.selectedServices.includes(service.id)
+                                                    ? 'border-blue-500 bg-blue-50'
+                                                    : 'border-gray-200 hover:border-blue-300'
                                                 }`}
                                         >
-                                            {createOrder.selectedServices.includes(service.id) ? 'Hapus' : 'Pilih'}
-                                        </button>
-                                    </div>
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex-1">
+                                                    <h4 className="font-medium text-gray-900">{service.name}</h4>
+                                                    <p className="text-sm text-gray-600">{service.duration}</p>
+                                                    <p className="text-xs text-gray-500">{service.description}</p>
 
-                                    {createOrder.selectedServices.includes(service.id) && (
-                                        <div className="mt-4 pt-4 border-t border-gray-200">
-                                            {service.is_weight_based ? (
-                                                <div className="flex items-center justify-between">
-                                                    <label className="text-sm font-medium text-gray-700">Berat Pakaian:</label>
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={() => updateServiceWeight(
-                                                                service.id,
-                                                                (createOrder.serviceWeights[service.id] || 1.0) - 0.5
-                                                            )}
-                                                            className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center"
-                                                        >
-                                                            <Minus className="w-3 h-3 text-gray-600" />
-                                                        </button>
-
-                                                        <div className="relative">
-                                                            <input
-                                                                type="number"
-                                                                value={createOrder.serviceWeights[service.id] || 1.0}
-                                                                onChange={(e) => updateServiceWeight(service.id, parseFloat(e.target.value))}
-                                                                step="0.1"
-                                                                min="0.1"
-                                                                max="50"
-                                                                className="w-20 text-center border border-gray-300 rounded-lg py-2 px-3"
-                                                            />
-                                                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">kg</span>
-                                                        </div>
-
-                                                        <button
-                                                            onClick={() => updateServiceWeight(
-                                                                service.id,
-                                                                (createOrder.serviceWeights[service.id] || 1.0) + 0.5
-                                                            )}
-                                                            className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center"
-                                                        >
-                                                            <Plus className="w-3 h-3 text-gray-600" />
-                                                        </button>
+                                                    <div className="mt-2">
+                                                        {createOrder.selectedCustomer?.type === 'member' && service.member_price ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-lg font-bold text-green-600">
+                                                                    {formatCurrency(service.member_price)}/{getServiceUnit(service)}
+                                                                </span>
+                                                                <span className="text-sm text-gray-500 line-through">
+                                                                    {formatCurrency(service.price)}
+                                                                </span>
+                                                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                                                    Member
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-lg font-bold text-green-600">
+                                                                {formatCurrency(service.price)}/{getServiceUnit(service)}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            ) : (
-                                                <div className="flex items-center justify-between">
-                                                    <label className="text-sm font-medium text-gray-700">Jumlah Baju:</label>
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={() => updateServiceQuantity(
-                                                                service.id,
-                                                                (createOrder.serviceQuantities[service.id] || 1) - 1
-                                                            )}
-                                                            className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center"
-                                                        >
-                                                            <Minus className="w-3 h-3 text-gray-600" />
-                                                        </button>
 
-                                                        <div className="relative">
-                                                            <input
-                                                                type="number"
-                                                                value={createOrder.serviceQuantities[service.id] || 1}
-                                                                onChange={(e) => updateServiceQuantity(service.id, parseInt(e.target.value))}
-                                                                min="1"
-                                                                max="100"
-                                                                className="w-20 text-center border border-gray-300 rounded-lg py-2 px-3"
-                                                            />
-                                                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">pcs</span>
+                                                <button
+                                                    onClick={() => toggleService(service.id)}
+                                                    disabled={loading}
+                                                    className={`px-4 py-2 text-sm rounded transition duration-200 ${createOrder.selectedServices.includes(service.id)
+                                                            ? 'bg-red-500 hover:bg-red-600 text-white'
+                                                            : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                                        }`}
+                                                >
+                                                    {createOrder.selectedServices.includes(service.id) ? 'Hapus' : 'Pilih'}
+                                                </button>
+                                            </div>
+
+                                            {createOrder.selectedServices.includes(service.id) && (
+                                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                                    {service.is_weight_based ? (
+                                                        <div className="flex items-center justify-between">
+                                                            <label className="text-sm font-medium text-gray-700">Berat Pakaian:</label>
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() => updateServiceWeight(
+                                                                        service.id,
+                                                                        (createOrder.serviceWeights[service.id] || 1.0) - 0.5
+                                                                    )}
+                                                                    className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center"
+                                                                >
+                                                                    <Minus className="w-3 h-3 text-gray-600" />
+                                                                </button>
+
+                                                                <div className="relative">
+                                                                    <input
+                                                                        type="number"
+                                                                        value={createOrder.serviceWeights[service.id] || 1.0}
+                                                                        onChange={(e) => updateServiceWeight(service.id, parseFloat(e.target.value))}
+                                                                        step="0.1"
+                                                                        min="0.1"
+                                                                        max="50"
+                                                                        className="w-20 text-center border border-gray-300 rounded-lg py-2 px-3"
+                                                                    />
+                                                                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">kg</span>
+                                                                </div>
+
+                                                                <button
+                                                                    onClick={() => updateServiceWeight(
+                                                                        service.id,
+                                                                        (createOrder.serviceWeights[service.id] || 1.0) + 0.5
+                                                                    )}
+                                                                    className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center"
+                                                                >
+                                                                    <Plus className="w-3 h-3 text-gray-600" />
+                                                                </button>
+                                                            </div>
                                                         </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-between">
+                                                            <label className="text-sm font-medium text-gray-700">Jumlah Baju:</label>
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() => updateServiceQuantity(
+                                                                        service.id,
+                                                                        (createOrder.serviceQuantities[service.id] || 1) - 1
+                                                                    )}
+                                                                    className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center"
+                                                                >
+                                                                    <Minus className="w-3 h-3 text-gray-600" />
+                                                                </button>
 
-                                                        <button
-                                                            onClick={() => updateServiceQuantity(
-                                                                service.id,
-                                                                (createOrder.serviceQuantities[service.id] || 1) + 1
-                                                            )}
-                                                            className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center"
-                                                        >
-                                                            <Plus className="w-3 h-3 text-gray-600" />
-                                                        </button>
+                                                                <div className="relative">
+                                                                    <input
+                                                                        type="number"
+                                                                        value={createOrder.serviceQuantities[service.id] || 1}
+                                                                        onChange={(e) => updateServiceQuantity(service.id, parseInt(e.target.value))}
+                                                                        min="1"
+                                                                        max="100"
+                                                                        className="w-20 text-center border border-gray-300 rounded-lg py-2 px-3"
+                                                                    />
+                                                                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">pcs</span>
+                                                                </div>
+
+                                                                <button
+                                                                    onClick={() => updateServiceQuantity(
+                                                                        service.id,
+                                                                        (createOrder.serviceQuantities[service.id] || 1) + 1
+                                                                    )}
+                                                                    className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center"
+                                                                >
+                                                                    <Plus className="w-3 h-3 text-gray-600" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="mt-3">
+                                                        <input
+                                                            type="text"
+                                                            value={createOrder.serviceNotes[service.id] || ''}
+                                                            onChange={(e) => updateServiceNote(service.id, e.target.value)}
+                                                            placeholder="Catatan untuk layanan ini..."
+                                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                                                        />
                                                     </div>
                                                 </div>
                                             )}
-
-                                            <div className="mt-3">
-                                                <input
-                                                    type="text"
-                                                    value={createOrder.serviceNotes[service.id] || ''}
-                                                    onChange={(e) => updateServiceNote(service.id, e.target.value)}
-                                                    placeholder="Catatan untuk layanan ini..."
-                                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                                                />
-                                            </div>
                                         </div>
-                                    )}
+                                    ))}
                                 </div>
-                            ))}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {createOrder.selectedServices.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-blue-800 mb-2">Ringkasan Order</h4>
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span>Jumlah Layanan:</span>
+                                <span className="font-medium">{getServiceCount()} layanan</span>
+                            </div>
+                            {createOrder.totalWeight > 0 && (
+                                <div className="flex justify-between">
+                                    <span>Total Berat:</span>
+                                    <span className="font-medium">{createOrder.totalWeight.toFixed(1)} kg</span>
+                                </div>
+                            )}
+                            {createOrder.totalItems > 0 && (
+                                <div className="flex justify-between">
+                                    <span>Total Item:</span>
+                                    <span className="font-medium">{createOrder.totalItems} pcs</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between text-lg font-bold border-t border-blue-200 pt-2">
+                                <span>Total:</span>
+                                <span className="text-green-600">{formatCurrency(createOrder.total)}</span>
+                            </div>
                         </div>
                     </div>
-                ))}
-            </div>
+                )}
 
-            {createOrder.selectedServices.length > 0 && (
+                <div className="flex gap-3">
+                    <button
+                        onClick={goToPrevStep}
+                        className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
+                    >
+                        <ArrowLeft className="w-4 h-4 inline mr-2" />
+                        Kembali
+                    </button>
+                    <button
+                        onClick={proceedToNextStep}
+                        disabled={createOrder.selectedServices.length === 0}
+                        className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
+                    >
+                        Review Order
+                        <ArrowRight className="w-4 h-4 inline ml-2" />
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    const renderStep3 = () => {
+        // Pastikan services ada
+        if (!services) {
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
+                        <FileText className="w-5 h-5" />
+                        Review Order
+                    </h2>
+                    <div className="text-center py-8">
+                        <p className="text-gray-500">Memuat data layanan...</p>
+                        <button 
+                            onClick={() => fetchServices()}
+                            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        >
+                            Muat Ulang Data
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-6">
+                <h2 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Review Order
+                </h2>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-700 mb-2">Informasi Pelanggan</h3>
+                    <p className="text-gray-900">{getSelectedCustomerName()}</p>
+                    {createOrder.selectedCustomer && (
+                        <p className="text-sm text-gray-600">{createOrder.selectedCustomer.phone || 'No telepon tidak tersedia'}</p>
+                    )}
+                </div>
+
+                <div>
+                    <h3 className="font-semibold text-gray-700 mb-3">Detail Layanan</h3>
+                    <div className="space-y-3">
+                        {createOrder.selectedServices.map(serviceId => {
+                            const service = getServiceById(serviceId);
+                            if (!service) return null;
+
+                            const quantity = createOrder.serviceQuantities[serviceId] || 1;
+                            const notes = createOrder.serviceNotes[serviceId] || '';
+                            const price = createOrder.selectedCustomer?.type === 'member' && service.member_price
+                                ? service.member_price
+                                : service.price;
+
+                            return (
+                                <div key={serviceId} className="border border-gray-200 rounded-lg p-3">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <h4 className="font-medium text-gray-900">{service.name} - {service.duration}</h4>
+                                            <p className="text-sm text-gray-600">{service.category}</p>
+                                            {notes && (
+                                                <p className="text-xs text-blue-600 mt-1">Catatan: {notes}</p>
+                                            )}
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-sm text-gray-600">
+                                                {quantity} x {formatCurrency(price)}
+                                            </div>
+                                            <div className="font-semibold text-green-600">
+                                                {formatCurrency(price * quantity)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Catatan Order</label>
+                    <textarea
+                        value={createOrder.orderNotes}
+                        onChange={(e) => setOrderNotes(e.target.value)}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="Tambahkan catatan untuk order ini (opsional)"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Perkiraan Selesai
+                    </label>
+                    <input
+                        type="datetime-local"
+                        value={createOrder.estimatedCompletion}
+                        onChange={(e) => setEstimatedCompletion(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                </div>
+
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-blue-800 mb-2">Ringkasan Order</h4>
-                    <div className="space-y-2 text-sm">
+                    <h3 className="font-semibold text-blue-800 mb-3">Ringkasan Pembayaran</h3>
+                    <div className="space-y-2">
                         <div className="flex justify-between">
-                            <span>Jumlah Layanan:</span>
-                            <span className="font-medium">{getServiceCount()} layanan</span>
+                            <span>Subtotal:</span>
+                            <span>{formatCurrency(createOrder.subtotal)}</span>
                         </div>
-                        {createOrder.totalWeight > 0 && (
-                            <div className="flex justify-between">
-                                <span>Total Berat:</span>
-                                <span className="font-medium">{createOrder.totalWeight.toFixed(1)} kg</span>
-                            </div>
-                        )}
-                        {createOrder.totalItems > 0 && (
-                            <div className="flex justify-between">
-                                <span>Total Item:</span>
-                                <span className="font-medium">{createOrder.totalItems} pcs</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between text-lg font-bold border-t border-blue-200 pt-2">
+                        <div className="flex justify-between font-semibold text-lg border-t border-blue-200 pt-2">
                             <span>Total:</span>
                             <span className="text-green-600">{formatCurrency(createOrder.total)}</span>
                         </div>
                     </div>
                 </div>
-            )}
 
-            <div className="flex gap-3">
-                <button
-                    onClick={goToPrevStep}
-                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
-                >
-                    <ArrowLeft className="w-4 h-4 inline mr-2" />
-                    Kembali
-                </button>
-                <button
-                    onClick={proceedToNextStep}
-                    disabled={createOrder.selectedServices.length === 0}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
-                >
-                    Review Order
-                    <ArrowRight className="w-4 h-4 inline ml-2" />
-                </button>
-            </div>
-        </div>
-    );
-
-    const renderStep3 = () => (
-        <div className="space-y-6">
-            <h2 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Review Order
-            </h2>
-
-            <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-700 mb-2">Informasi Pelanggan</h3>
-                <p className="text-gray-900">{getSelectedCustomerName()}</p>
-                {createOrder.selectedCustomer && (
-                    <p className="text-sm text-gray-600">{createOrder.selectedCustomer.phone || 'No telepon tidak tersedia'}</p>
-                )}
-            </div>
-
-            <div>
-                <h3 className="font-semibold text-gray-700 mb-3">Detail Layanan</h3>
-                <div className="space-y-3">
-                    {createOrder.selectedServices.map(serviceId => {
-                        const service = getServiceById(serviceId);
-                        if (!service) return null;
-
-                        const quantity = createOrder.serviceQuantities[serviceId] || 1;
-                        const notes = createOrder.serviceNotes[serviceId] || '';
-                        const price = createOrder.selectedCustomer?.type === 'member' && service.member_price
-                            ? service.member_price
-                            : service.price;
-
-                        return (
-                            <div key={serviceId} className="border border-gray-200 rounded-lg p-3">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex-1">
-                                        <h4 className="font-medium text-gray-900">{service.name} - {service.duration}</h4>
-                                        <p className="text-sm text-gray-600">{service.category}</p>
-                                        {notes && (
-                                            <p className="text-xs text-blue-600 mt-1">Catatan: {notes}</p>
-                                        )}
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-sm text-gray-600">
-                                            {quantity} x {formatCurrency(price)}
-                                        </div>
-                                        <div className="font-semibold text-green-600">
-                                            {formatCurrency(price * quantity)}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                <div className="flex gap-3">
+                    <button
+                        onClick={goToPrevStep}
+                        className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
+                    >
+                        <ArrowLeft className="w-4 h-4 inline mr-2" />
+                        Kembali
+                    </button>
+                    <button
+                        onClick={proceedToNextStep}
+                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
+                    >
+                        Pembayaran
+                        <ArrowRight className="w-4 h-4 inline ml-2" />
+                    </button>
                 </div>
             </div>
-
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Catatan Order</label>
-                <textarea
-                    value={createOrder.orderNotes}
-                    onChange={(e) => setOrderNotes(e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    placeholder="Tambahkan catatan untuk order ini (opsional)"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Perkiraan Selesai
-                </label>
-                <input
-                    type="datetime-local"
-                    value={createOrder.estimatedCompletion}
-                    onChange={(e) => setEstimatedCompletion(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-800 mb-3">Ringkasan Pembayaran</h3>
-                <div className="space-y-2">
-                    <div className="flex justify-between">
-                        <span>Subtotal:</span>
-                        <span>{formatCurrency(createOrder.subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold text-lg border-t border-blue-200 pt-2">
-                        <span>Total:</span>
-                        <span className="text-green-600">{formatCurrency(createOrder.total)}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex gap-3">
-                <button
-                    onClick={goToPrevStep}
-                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
-                >
-                    <ArrowLeft className="w-4 h-4 inline mr-2" />
-                    Kembali
-                </button>
-                <button
-                    onClick={proceedToNextStep}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
-                >
-                    Pembayaran
-                    <ArrowRight className="w-4 h-4 inline ml-2" />
-                </button>
-            </div>
-        </div>
-    );
+        );
+    };
 
     const renderStep4 = () => (
         <div className="space-y-6">
