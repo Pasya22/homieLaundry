@@ -1,12 +1,18 @@
+// src/components/orders/OrderDetail.tsx
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useOrderStore } from '../../store/orderStore';
-import { 
-    ArrowLeft, FileText, User, Package, 
+import Invoice from './Invoice';
+import {
+    ArrowLeft, FileText, User, Package,
     CheckCircle, AlertCircle, Printer, CreditCard,
-    RefreshCw, Check, Calendar,
+    RefreshCw,
+    Zap, Play, DollarSign,
+    Scale, Clock, Home,
+    X,
+    // CircleEllipsis
 } from 'lucide-react';
-import { type OrderStatus } from '../../types/order';
+import { calculateTotalCustomItems, hasCustomItems, parseCustomItems, type OrderStatus } from '../../types/order';
 
 const OrderDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -20,7 +26,12 @@ const OrderDetail: React.FC = () => {
     } = useOrderStore();
 
     const [showConfirmPayment, setShowConfirmPayment] = useState(false);
+    const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+    const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null);
+    const [showInvoice, setShowInvoice] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+    const [showFABMenu, setShowFABMenu] = useState(false);
+    const [activeTab, setActiveTab] = useState<'info' | 'items' | 'notes'>('info');
 
     React.useEffect(() => {
         if (id) {
@@ -29,12 +40,13 @@ const OrderDetail: React.FC = () => {
     }, [id]);
 
     const statusSteps: Record<OrderStatus, { label: string; icon: string; color: string }> = {
-        'request': { label: 'Penerimaan', icon: '📥', color: 'blue' },
-        'washing': { label: 'Pencucian', icon: '🧼', color: 'yellow' },
+        'request': { label: 'Penerimaan', icon: '📥', color: 'sky' },
+        'washing': { label: 'Pencucian', icon: '🧼', color: 'amber' },
         'drying': { label: 'Pengeringan', icon: '💨', color: 'orange' },
         'ironing': { label: 'Setrika', icon: '👕', color: 'purple' },
         'ready': { label: 'Siap Diambil', icon: '✅', color: 'green' },
         'completed': { label: 'Selesai', icon: '🏁', color: 'green' },
+        'cancelled': { label: 'Dibatalkan', icon: '❌', color: 'red' },
     };
 
     const statusOrder: OrderStatus[] = ['request', 'washing', 'drying', 'ironing', 'ready', 'completed'];
@@ -47,33 +59,31 @@ const OrderDetail: React.FC = () => {
         }).format(amount);
     };
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-    };
+    // const formatTime = (dateString: string) => {
+    //     const date = new Date(dateString);
+    //     return date.toLocaleTimeString('id-ID', {
+    //         hour: '2-digit',
+    //         minute: '2-digit',
+    //     });
+    // };
 
     const getStatusBadge = (status: OrderStatus) => {
         const badges: Record<OrderStatus, string> = {
-            'request': 'bg-blue-100 text-blue-800',
-            'washing': 'bg-yellow-100 text-yellow-800',
-            'drying': 'bg-orange-100 text-orange-800',
-            'ironing': 'bg-purple-100 text-purple-800',
-            'ready': 'bg-green-100 text-green-800',
-            'completed': 'bg-green-500 text-white',
+            'request': 'bg-sky-100 text-sky-800 border border-sky-300',
+            'washing': 'bg-amber-100 text-amber-800 border border-amber-300',
+            'drying': 'bg-orange-100 text-orange-800 border border-orange-300',
+            'ironing': 'bg-purple-100 text-purple-800 border border-purple-300',
+            'ready': 'bg-green-100 text-green-800 border border-green-300',
+            'completed': 'bg-green-500 text-white border border-green-600',
+            'cancelled': 'bg-red-500 text-red-200 border border-red-600',
         };
         return badges[status];
     };
 
-    const getPaymentBadge = (status: 'pending' | 'paid') => {
+    const getPaymentBadge = (status: 'pending' | 'paid' | 'partial' | 'cancelled') => {
         return status === 'paid'
-            ? 'bg-green-100 text-green-800'
-            : 'bg-red-100 text-red-800';
+            ? 'bg-green-100 text-green-800 border border-green-300'
+            : 'bg-red-100 text-red-800 border border-red-300';
     };
 
     const getNextStatus = (): OrderStatus | null => {
@@ -85,7 +95,6 @@ const OrderDetail: React.FC = () => {
     const handleUpdateStatus = async (newStatus: OrderStatus) => {
         if (!currentOrder || !id) return;
 
-        // Validate status progression
         const currentIndex = statusOrder.indexOf(currentOrder.status);
         const newIndex = statusOrder.indexOf(newStatus);
 
@@ -98,6 +107,7 @@ const OrderDetail: React.FC = () => {
         setIsUpdatingStatus(true);
         try {
             await updateOrderStatus(parseInt(id), newStatus);
+            setShowFABMenu(false);
         } finally {
             setIsUpdatingStatus(false);
         }
@@ -105,339 +115,747 @@ const OrderDetail: React.FC = () => {
 
     const handleMarkAsPaid = async () => {
         if (!currentOrder || !id) return;
-        await updatePaymentStatus(parseInt(id), 'paid');
-        setShowConfirmPayment(false);
+
+        // Validasi file upload
+        if (!paymentProofFile) {
+            alert('Silakan upload bukti pembayaran terlebih dahulu');
+            return;
+        }
+
+        try {
+            setIsUpdatingStatus(true);
+
+            // Upload file dan update status
+            await updatePaymentStatus(parseInt(id), 'paid', paymentProofFile);
+
+            // Success feedback
+            alert('✅ Pembayaran berhasil dikonfirmasi dan bukti tersimpan!');
+
+            // Reset state
+            setShowConfirmPayment(false);
+            setPaymentProofFile(null);
+            setPaymentProofPreview(null);
+            setShowFABMenu(false);
+
+        } catch (error) {
+            console.error('Error marking as paid:', error);
+            alert('❌ Gagal mengupdate status pembayaran. Silakan coba lagi.');
+        } finally {
+            setIsUpdatingStatus(false);
+        }
     };
 
     const handleMarkAsCompleted = async () => {
         if (!currentOrder || !id) return;
-        
+
         if (currentOrder.status !== 'ready') {
             alert('Order belum siap untuk diselesaikan! Pastikan status sudah "Siap Diambil" terlebih dahulu.');
             return;
         }
 
         await updateOrderStatus(parseInt(id), 'completed');
+        setShowFABMenu(false);
     };
+
+    const handlePrint = () => {
+        setShowInvoice(true);
+        // setTimeout(() => {
+        //     window.print();
+        // }, 100);
+        setShowFABMenu(false);
+    };
+
+    const quickActions = [
+        {
+            id: 'next',
+            label: 'Lanjut Step',
+            icon: Play,
+            color: 'bg-gradient-to-br from-sky-500 to-sky-600',
+            visible: () => !!getNextStatus() && currentOrder?.status !== 'completed',
+            action: () => getNextStatus() && handleUpdateStatus(getNextStatus()!)
+        },
+        {
+            id: 'paid',
+            label: 'Tandai Lunas',
+            icon: DollarSign,
+            color: 'bg-gradient-to-br from-green-500 to-green-600',
+            visible: () => currentOrder?.payment_status === 'pending',
+            action: () => setShowConfirmPayment(true)
+        },
+        {
+            id: 'print',
+            label: 'Print Nota',
+            icon: Printer,
+            color: 'bg-gradient-to-br from-purple-500 to-purple-600',
+            visible: () => true,
+            action: handlePrint
+        },
+        {
+            id: 'complete',
+            label: 'Selesaikan',
+            icon: CheckCircle,
+            color: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+            visible: () => currentOrder?.status === 'ready',
+            action: handleMarkAsCompleted
+        },
+    ];
+
+    const visibleActions = quickActions.filter(action => action.visible());
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-64">
-                <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
+            <div className="min-h-screen flex justify-center items-center bg-gradient-to-b from-sky-50 to-white">
+                <div className="text-center">
+                    <RefreshCw className="w-12 h-12 animate-spin text-sky-500 mx-auto mb-4" />
+                    <p className="text-sky-600 font-medium">Memuat detail order...</p>
+                </div>
             </div>
         );
     }
 
     if (error || !currentOrder) {
         return (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" />
-                {error || 'Order tidak ditemukan'}
+            <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white p-4 flex items-center justify-center">
+                <div className="w-full max-w-sm">
+                    <div className="bg-white rounded-2xl p-6 border border-sky-200 shadow-sm">
+                        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                        <h3 className="text-lg font-bold text-gray-800 text-center mb-2">
+                            {error || 'Order tidak ditemukan'}
+                        </h3>
+                        <Link
+                            to="/orders"
+                            className="block w-full text-center bg-sky-500 hover:bg-sky-600 text-white font-medium py-3 px-4 rounded-xl transition-colors mt-4"
+                        >
+                            Kembali ke Daftar Order
+                        </Link>
+                    </div>
+                </div>
             </div>
         );
     }
 
-    const nextStatus = getNextStatus();
+    // const nextStatus = getNextStatus();
     const currentStatusIndex = statusOrder.indexOf(currentOrder.status);
+    const progressPercentage = ((currentStatusIndex + 1) / statusOrder.length) * 100;
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-2">
-                <Link to="/orders" className="text-blue-500 hover:text-blue-700">
-                    <ArrowLeft className="w-6 h-6" />
-                </Link>
-                <div>
-                    <h1 className="text-2xl font-bold text-blue-700">Detail Order</h1>
-                    <p className="text-gray-600">{currentOrder.order_number}</p>
+        <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white">
+            {/* App Header */}
+            <div className=" bg-white border-b border-sky-200 px-4 py-3 ">
+                <div className="flex items-center gap-3">
+                    <Link
+                        to="/orders"
+                        className="text-sky-600 hover:text-sky-700 p-2 hover:bg-sky-50 rounded-xl transition-colors"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </Link>
+                    <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-sm text-gray-600 font-medium">Order Detail</h1>
+                                <p className="text-base font-bold text-gray-900">{currentOrder.order_number}</p>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className={`px-3 py-1 rounded-lg text-xs font-bold ${getStatusBadge(currentOrder.status)}`}>
+                                    {statusSteps[currentOrder.status].label}
+                                </span>
+                                <span className={`px-2 py-0.5 mt-1 rounded-full text-[10px] font-bold ${getPaymentBadge(currentOrder.payment_status)}`}>
+                                    {currentOrder.payment_status === 'paid' ? 'LUNAS' : 'BELUM BAYAR'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tabs Navigation */}
+                <div className="flex mt-4 border-b border-gray-200">
+                    <button
+                        onClick={() => setActiveTab('info')}
+                        className={`flex-1 pb-3 text-center transition-all relative ${activeTab === 'info' ? 'text-sky-600' : 'text-gray-500'}`}
+                    >
+                        <User className="w-5 h-5 mx-auto mb-1" />
+                        <span className="text-xs font-medium">Info</span>
+                        {activeTab === 'info' && (
+                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-12 h-0.5 bg-sky-500 rounded-full"></div>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('items')}
+                        className={`flex-1 pb-3 text-center transition-all relative ${activeTab === 'items' ? 'text-sky-600' : 'text-gray-500'}`}
+                    >
+                        <Package className="w-5 h-5 mx-auto mb-1" />
+                        <span className="text-xs font-medium">Items</span>
+                        {activeTab === 'items' && (
+                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-12 h-0.5 bg-sky-500 rounded-full"></div>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('notes')}
+                        className={`flex-1 pb-3 text-center transition-all relative ${activeTab === 'notes' ? 'text-sky-600' : 'text-gray-500'}`}
+                    >
+                        <FileText className="w-5 h-5 mx-auto mb-1" />
+                        <span className="text-xs font-medium">Catatan</span>
+                        {activeTab === 'notes' && (
+                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-12 h-0.5 bg-sky-500 rounded-full"></div>
+                        )}
+                    </button>
                 </div>
             </div>
 
-            {/* Order Status & Actions */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex justify-between items-start mb-6">
-                    <div>
-                        <h2 className="text-lg font-semibold text-blue-700">Status Order</h2>
-                        <div className="flex items-center gap-2 mt-2 flex-wrap">
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(currentOrder.status)}`}>
-                                {statusSteps[currentOrder.status].label}
-                            </span>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPaymentBadge(currentOrder.payment_status)}`}>
-                                {currentOrder.payment_status === 'paid' ? 'LUNAS' : 'BELUM BAYAR'}
-                            </span>
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-sm text-gray-600">Dibuat</p>
-                        <p className="text-sm font-medium">{formatDate(currentOrder.created_at)}</p>
-                    </div>
-                </div>
+            {/* Main Content */}
+            <div className="p-4 pb-24">
+                {/* Tab 1: Info */}
+                {activeTab === 'info' && (
+                    <div className="space-y-4">
+                        {/* Progress Card */}
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-sky-600" />
+                                    <h3 className="text-sm font-bold text-gray-800">Progress Order</h3>
+                                </div>
+                                <span className="text-xs font-medium text-sky-600 bg-sky-50 px-2 py-1 rounded">
+                                    {currentStatusIndex + 1}/{statusOrder.length}
+                                </span>
+                            </div>
 
-                {/* Progress Steps */}
-                <div className="mb-8 overflow-x-auto pb-2">
-                    <div className="flex items-center relative min-w-max px-2">
-                        {statusOrder.map((status, index) => {
-                            const isCompleted = index <= currentStatusIndex;
-                            const isCurrent = status === currentOrder.status;
-                            
-                            return (
-                                <React.Fragment key={status}>
-                                    <div className="flex flex-col items-center mt-2 z-10 min-w-[70px]">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium transition-all duration-300
-                                            ${isCompleted ? 'bg-green-500' : 'bg-gray-300'}
-                                            ${isCurrent ? 'ring-2 ring-green-400 ring-offset-2 scale-110' : ''}`}>
-                                            {isCompleted ? (
-                                                <span className="text-lg">{statusSteps[status].icon}</span>
-                                            ) : (
-                                                index + 1
-                                            )}
+                            <div className="space-y-3">
+                                <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div
+                                        className="absolute h-full bg-gradient-to-r from-sky-400 to-sky-500 rounded-full transition-all duration-700"
+                                        style={{ width: `${progressPercentage}%` }}
+                                    />
+                                </div>
+
+                                <div className="flex justify-between text-xs text-gray-600">
+                                    <div className="text-center flex-1">
+                                        <div className="w-6 h-6 rounded-full bg-sky-100 border-2 border-sky-300 mx-auto mb-1 flex items-center justify-center">
+                                            <span className="text-[10px] font-bold text-sky-700">1</span>
                                         </div>
-                                        <span className={`text-xs mt-1 text-center ${isCompleted ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
-                                            {statusSteps[status].label}
-                                        </span>
+                                        <span className="font-medium">Mulai</span>
                                     </div>
-                                    {index < statusOrder.length - 1 && (
-                                        <div className={`h-1 mx-2 -mt-5 min-w-[40px] transition-all duration-300
-                                            ${index < currentStatusIndex ? 'bg-green-500' : 'bg-gray-200'}`}>
+                                    <div className="text-center flex-1">
+                                        <div className="w-8 h-8 rounded-full bg-sky-500 border-2 border-sky-600 mx-auto mb-1 flex items-center justify-center">
+                                            <span className="text-xs font-bold text-white">{currentStatusIndex + 1}</span>
                                         </div>
-                                    )}
-                                </React.Fragment>
-                            );
-                        })}
-                    </div>
-                </div>
+                                        <span className="font-medium text-sky-700">{statusSteps[currentOrder.status].label}</span>
+                                    </div>
+                                    <div className="text-center flex-1">
+                                        <div className="w-6 h-6 rounded-full bg-green-100 border-2 border-green-300 mx-auto mb-1 flex items-center justify-center">
+                                            <span className="text-[10px] font-bold text-green-700">{statusOrder.length}</span>
+                                        </div>
+                                        <span className="font-medium">Selesai</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                {/* Quick Actions */}
-                {currentOrder.status !== 'completed' && (
-                    <div className="border-t pt-6">
-                        <h3 className="text-md font-semibold text-gray-700 mb-4">Aksi Cepat</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                            {nextStatus && (
-                                <button
-                                    onClick={() => handleUpdateStatus(nextStatus)}
-                                    disabled={isUpdatingStatus}
-                                    className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 py-3 rounded-lg text-sm font-medium transition duration-200 flex items-center justify-center gap-2"
-                                >
-                                    <ArrowLeft className="w-4 h-4 rotate-180" />
-                                    {isUpdatingStatus ? 'Loading...' : `Ke ${statusSteps[nextStatus].label}`}
-                                </button>
-                            )}
+                        {/* Customer Info */}
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                            <div className="flex items-center gap-2 mb-3">
+                                <User className="w-4 h-4 text-sky-600" />
+                                <h3 className="text-sm font-bold text-gray-800">Informasi Pelanggan</h3>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-10 h-10 bg-sky-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <User className="w-5 h-5 text-sky-600" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-xs text-gray-500 mb-1">Nama</p>
+                                        <p className="text-sm font-bold text-gray-900">{currentOrder.customer.name}</p>
+                                    </div>
+                                </div>
 
-                            {currentOrder.payment_status === 'pending' && (
-                                <button
-                                    onClick={() => setShowConfirmPayment(true)}
-                                    disabled={isUpdatingStatus}
-                                    className="bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white px-4 py-3 rounded-lg text-sm font-medium transition duration-200 flex items-center justify-center gap-2"
-                                >
-                                    <CheckCircle className="w-4 h-4" />
-                                    Tandai Lunas
-                                </button>
-                            )}
+                                {currentOrder.customer.phone && (
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                            <span className="text-lg">📱</span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-xs text-gray-500 mb-1">Telepon</p>
+                                            <a
+                                                href={`tel:${currentOrder.customer.phone}`}
+                                                className="text-sm font-bold text-sky-600 hover:text-sky-700"
+                                            >
+                                                {currentOrder.customer.phone}
+                                            </a>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
-                            <button className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg text-sm font-medium transition duration-200 flex items-center justify-center gap-2">
-                                <Printer className="w-4 h-4" />
-                                Print Nota
-                            </button>
+                        {/* Order Summary */}
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Scale className="w-4 h-4 text-sky-600" />
+                                <h3 className="text-sm font-bold text-gray-800">Ringkasan Order</h3>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center py-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                            <Package className="w-4 h-4 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500">Total Item</p>
+                                            <p className="text-sm font-bold text-gray-900">{currentOrder.order_items.length}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {currentOrder.weight && (
+                                    <div className="flex justify-between items-center py-2 border-t border-gray-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                                                <Scale className="w-4 h-4 text-amber-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-500">Berat Total</p>
+                                                <p className="text-sm font-bold text-gray-900">{currentOrder.weight} kg</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="pt-3 border-t border-gray-200">
+                                    <div className="flex justify-between items-center">
+                                        <p className="text-sm font-bold text-gray-800">Total Biaya</p>
+                                        <p className="text-lg font-bold text-green-600">
+                                            {formatCurrency(currentOrder.total_amount)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
-            </div>
 
-            {/* Customer Information */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-lg font-semibold text-blue-700 mb-4 flex items-center gap-2">
-                    <User className="w-5 h-5" />
-                    Informasi Pelanggan
-                </h2>
-                <div className="space-y-3">
-                    <div className="flex justify-between">
-                        <span className="text-gray-600">Nama:</span>
-                        <span className="font-medium">{currentOrder.customer.name}</span>
-                    </div>
-                    {currentOrder.customer.phone && (
-                        <div className="flex justify-between">
-                            <span className="text-gray-600">Telepon:</span>
-                            <a href={`tel:${currentOrder.customer.phone}`} className="font-medium text-blue-600 hover:text-blue-700">
-                                {currentOrder.customer.phone}
-                            </a>
+                {/* Tab 2: Items */}
+                {/* Tab 2: Items */}
+                {activeTab === 'items' && (
+                    <div className="space-y-3">
+                        {/* Header */}
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Package className="w-5 h-5 text-sky-600" />
+                                    <div>
+                                        <h3 className="text-sm font-bold text-gray-800">Detail Layanan</h3>
+                                        <p className="text-xs text-gray-500">{currentOrder.order_items.length} item</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    )}
-                    {currentOrder.customer.address && (
-                        <div className="flex flex-col">
-                            <span className="text-gray-600 mb-1">Alamat:</span>
-                            <span className="font-medium">{currentOrder.customer.address}</span>
-                        </div>
-                    )}
-                </div>
-            </div>
 
-            {/* Order Items */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-lg font-semibold text-blue-700 mb-4 flex items-center gap-2">
-                    <Package className="w-5 h-5" />
-                    Detail Layanan
-                </h2>
-                <div className="space-y-4">
-                    {currentOrder.order_items.map((item) => (
-                        <div key={item.id} className="border border-gray-200 rounded-lg p-4">
-                            <div className="flex justify-between items-start mb-2">
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-900">{item.service.name}</h3>
-                                    <p className="text-sm text-gray-600">{item.service.category}</p>
-                                    {item.service.duration && (
-                                        <p className="text-xs text-gray-500">{item.service.duration}</p>
-                                    )}
-                                    {item.notes && (
-                                        <p className="text-sm text-blue-600 mt-1">
-                                            <FileText className="w-4 h-4 inline mr-1" />
-                                            {item.notes}
-                                        </p>
-                                    )}
+                        {/* Items List */}
+                        <div className="space-y-3">
+                            {currentOrder.order_items.map((item) => {
+                                // GUNAKAN HELPER FUNCTION
+                                const customItems = parseCustomItems(item.custom_items);
+                                const totalCustomItems = calculateTotalCustomItems(item.custom_items);
+                                const hasItems = hasCustomItems(item);
+
+                                return (
+                                    <div key={item.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="flex-1">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-lg">
+                                                            {item.service.category === 'pakaian' ? '👕' : '🛏️'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="text-sm font-bold text-gray-900">{item.service.name}</h4>
+                                                        <p className="text-xs text-gray-500 mt-1">{item.service.category}</p>
+                                                        {item.service.duration && (
+                                                            <div className="flex items-center gap-1 mt-1">
+                                                                <Clock className="w-3 h-3 text-gray-400" />
+                                                                <span className="text-xs text-gray-500">{item.service.duration}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Custom Items Detail - MENGGUNAKAN HELPER */}
+                                                {hasItems && (
+                                                    <div className="mt-3 p-3 bg-sky-50 rounded-lg border border-sky-200">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <Package className="w-3 h-3 text-sky-600" />
+                                                            <p className="text-xs font-bold text-sky-800">Detail Barang:</p>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            {customItems.map((customItem, idx) => (
+                                                                <div key={idx} className="flex justify-between items-center bg-white px-2 py-1.5 rounded">
+                                                                    <span className="text-xs text-gray-700">{customItem.name || 'Barang'}</span>
+                                                                    <span className="text-xs font-bold text-sky-700">{customItem.quantity || 0} pcs</span>
+                                                                </div>
+                                                            ))}
+                                                            <div className="flex justify-between items-center bg-sky-100 px-2 py-1.5 rounded mt-1 border-t border-sky-300">
+                                                                <span className="text-xs font-bold text-sky-800">Total Item:</span>
+                                                                <span className="text-xs font-bold text-sky-800">{totalCustomItems} pcs</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {item.notes && (
+                                                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                                        <div className="flex items-start gap-2">
+                                                            <FileText className="w-3 h-3 text-blue-500 mt-0.5 flex-shrink-0" />
+                                                            <p className="text-xs text-blue-700">{item.notes}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                                            <div className="text-sm text-gray-500">
+                                                {item.service.is_weight_based
+                                                    ? `${item.weight} kg × ${formatCurrency(item.unit_price)}/kg`
+                                                    : `${item.quantity} pcs × ${formatCurrency(item.unit_price)}/pcs`
+                                                }
+                                            </div>
+                                            <div className="text-base font-bold text-green-600">
+                                                {formatCurrency(item.subtotal)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Total Summary */}
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border-2 border-green-200 shadow-sm">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <p className="text-sm font-medium text-green-800">Total Order</p>
+                                    <p className="text-xs text-green-600">{currentOrder.order_items.length} layanan</p>
+                                    <p className="text-xs text-green-600">{currentOrder.total_items} total barang</p>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-lg font-bold text-green-600">
-                                        {formatCurrency(item.subtotal)}
-                                    </div>
-                                    <div className="text-sm text-gray-600">
-                                        {item.quantity} x {formatCurrency(item.unit_price)}
-                                    </div>
+                                    <p className="text-lg font-bold text-green-700">
+                                        {formatCurrency(currentOrder.total_amount)}
+                                    </p>
                                 </div>
                             </div>
                         </div>
-                    ))}
-                </div>
-
-                {/* Order Summary */}
-                <div className="border-t border-gray-200 mt-6 pt-6">
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-lg font-bold">
-                            <span>Total:</span>
-                            <span className="text-green-600">{formatCurrency(currentOrder.total_amount)}</span>
-                        </div>
                     </div>
-                </div>
-            </div>
-
-            {/* Order Notes & Info */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-lg font-semibold text-blue-700 mb-4 flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    Informasi Order
-                </h2>
-                <div className="space-y-4">
-                    {currentOrder.notes && (
-                        <div>
-                            <h3 className="text-sm font-medium text-gray-700 mb-1">Catatan Order:</h3>
-                            <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{currentOrder.notes}</p>
-                        </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <h3 className="text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                                <CreditCard className="w-4 h-4" />
-                                Metode Bayar
-                            </h3>
-                            <p className="text-gray-900">{currentOrder.payment_method === 'cash' ? 'Tunai' : 'Transfer'}</p>
-                        </div>
-                        <div>
-                            <h3 className="text-sm font-medium text-gray-700 mb-1">Status Bayar</h3>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentBadge(currentOrder.payment_status)}`}>
-                                {currentOrder.payment_status === 'paid' ? 'LUNAS' : 'BELUM BAYAR'}
-                            </span>
-                        </div>
-                    </div>
-
-                    {currentOrder.estimated_completion && (
-                        <div>
-                            <h3 className="text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                                <Calendar className="w-4 h-4" />
-                                Perkiraan Selesai
-                            </h3>
-                            <p className="text-gray-900">{formatDate(currentOrder.estimated_completion)}</p>
-                        </div>
-                    )}
-
-                    {currentOrder.weight && (
-                        <div>
-                            <h3 className="text-sm font-medium text-gray-700 mb-1">Total Berat</h3>
-                            <p className="text-gray-900">{currentOrder.weight} kg</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3">
-                <Link
-                    to="/orders"
-                    className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition duration-200 text-center flex items-center justify-center gap-2"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    Kembali
-                </Link>
-
-                {currentOrder.status === 'ready' ? (
-                    <button
-                        onClick={handleMarkAsCompleted}
-                        disabled={isUpdatingStatus}
-                        className="bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2"
-                    >
-                        <Check className="w-4 h-4" />
-                        {isUpdatingStatus ? 'Loading...' : 'Tandai Selesai'}
-                    </button>
-                ) : currentOrder.status === 'completed' ? (
-                    <div className="bg-green-100 text-green-700 font-medium py-3 px-4 rounded-lg text-center flex items-center justify-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        Order Selesai
-                    </div>
-                ) : (
-                    <button
-                        onClick={() => alert(`Order harus dalam status SIAP DIAMBIL sebelum bisa ditandai selesai.\n\nStatus saat ini: ${statusSteps[currentOrder.status].label}`)}
-                        className="bg-gray-300 cursor-not-allowed text-gray-600 font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2"
-                    >
-                        <Check className="w-4 h-4" />
-                        Tandai Selesai
-                    </button>
                 )}
-            </div>
 
-            {/* Confirm Payment Modal */}
-            {showConfirmPayment && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg w-full max-w-md p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Konfirmasi Pembayaran</h3>
-                        <p className="text-gray-600 mb-4">
-                            Apakah Anda yakin ingin menandai order ini sebagai LUNAS?
-                        </p>
-                        <div className="bg-gray-50 p-3 rounded-lg mb-4">
-                            <div className="flex justify-between text-sm mb-1">
-                                <span>No. Order:</span>
-                                <span className="font-medium">{currentOrder.order_number}</span>
+                {/* Tab 3: Notes */}
+                {activeTab === 'notes' && (
+                    <div className="space-y-4">
+                        {/* Order Notes */}
+                        {currentOrder.notes && (
+                            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <FileText className="w-5 h-5 text-sky-600" />
+                                    <h3 className="text-sm font-bold text-gray-800">Catatan Order</h3>
+                                </div>
+                                <div className="p-4 bg-sky-50 rounded-xl border border-sky-200">
+                                    <p className="text-sm text-gray-700 leading-relaxed">{currentOrder.notes}</p>
+                                </div>
                             </div>
-                            <div className="flex justify-between text-lg font-bold">
-                                <span>Total:</span>
-                                <span className="text-green-600">{formatCurrency(currentOrder.total_amount)}</span>
+                        )}
+
+                        {/* Payment Info */}
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                            <div className="flex items-center gap-2 mb-3">
+                                <CreditCard className="w-5 h-5 text-sky-600" />
+                                <h3 className="text-sm font-bold text-gray-800">Informasi Pembayaran</h3>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center py-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                            <CreditCard className="w-4 h-4 text-purple-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500">Metode Bayar</p>
+                                            <p className="text-sm font-bold text-gray-900">
+                                                {currentOrder.payment_method === 'cash' ? 'Tunai' : 'Transfer'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-between items-center py-2 border-t border-gray-100">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${currentOrder.payment_status === 'paid' ? 'bg-green-100' : 'bg-red-100'
+                                            }`}>
+                                            {currentOrder.payment_status === 'paid' ? (
+                                                <CheckCircle className="w-4 h-4 text-green-600" />
+                                            ) : (
+                                                <Clock className="w-4 h-4 text-red-600" />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500">Status Bayar</p>
+                                            <p className={`text-sm font-bold ${currentOrder.payment_status === 'paid' ? 'text-green-600' : 'text-red-600'
+                                                }`}>
+                                                {currentOrder.payment_status === 'paid' ? 'LUNAS' : 'BELUM BAYAR'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {currentOrder.estimated_completion && (
+                                    <div className="flex justify-between items-center py-2 border-t border-gray-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                                                <Clock className="w-4 h-4 text-orange-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-500">Estimasi Selesai</p>
+                                                <p className="text-sm font-bold text-gray-900">
+                                                    {(new Date(currentOrder.estimated_completion).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }))}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={handleMarkAsPaid}
-                                disabled={isUpdatingStatus}
-                                className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white font-medium py-2 px-4 rounded-lg transition duration-200"
+
+                        {/* Additional Info */}
+                        {currentOrder.customer.address && (
+                            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Home className="w-5 h-5 text-sky-600" />
+                                    <h3 className="text-sm font-bold text-gray-800">Alamat Pengambilan</h3>
+                                </div>
+                                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <p className="text-sm text-gray-700">{currentOrder.customer.address}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Back Button */}
+                <div className="mt-6 mb-6">
+                    <Link
+                        to="/orders"
+                        className="block w-full text-center bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-xl border border-gray-300 transition-colors"
+                    >
+                        Kembali ke Daftar Order
+                    </Link>
+                </div>
+            </div>
+
+            {/* Floating Action Button */}
+            <div className="fixed bottom-20 right-2 z-50">
+                {/* Quick Action Buttons */}
+                {showFABMenu && (
+                    <div className="flex flex-col items-end gap-3 mb-3">
+                        {visibleActions.map((action, index) => (
+                            <div
+                                key={action.id}
+                                className="flex items-center gap-2 animate-fadeInUp"
+                                style={{ animationDelay: `${index * 100}ms` }}
                             >
-                                {isUpdatingStatus ? 'Processing...' : 'Ya, Tandai Lunas'}
-                            </button>
-                            <button
-                                onClick={() => setShowConfirmPayment(false)}
-                                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200"
-                            >
-                                Batal
-                            </button>
+                                <span className="bg-white px-4 py-2 rounded-xl text-sm font-medium text-gray-800 shadow-lg border border-gray-200">
+                                    {action.label}
+                                </span>
+                                <button
+                                    onClick={action.action}
+                                    className={`w-12 h-12 rounded-full ${action.color} text-white shadow-lg hover:shadow-xl active:scale-95 transition-all duration-300 flex items-center justify-center`}
+                                >
+                                    <action.icon className="w-5 h-5" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Main FAB */}
+                <button
+                    onClick={() => setShowFABMenu(!showFABMenu)}
+                    className={`w-14 h-14 rounded-full bg-gradient-to-br from-sky-500 to-sky-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center ${showFABMenu ? 'rotate-45 scale-110' : ''
+                        }`}
+                >
+                    {showFABMenu ? (
+                        <X className="w-6 h-6" />
+                    ) : (
+                        <Zap className="w-6 h-6" />
+                    )}
+                </button>
+            </div>
+
+            {/* Confirm Payment Modal dengan Upload Bukti */}
+            {showConfirmPayment && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-scaleIn max-h-[90vh] overflow-y-auto">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <DollarSign className="w-8 h-8 text-green-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Konfirmasi Pembayaran</h3>
+                            <p className="text-sm text-gray-600">
+                                Upload bukti pembayaran untuk order ini
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Info Order - Read Only */}
+                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-600">No. Order</span>
+                                    <span className="text-sm font-bold text-gray-900">{currentOrder.order_number}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-600">Customer</span>
+                                    <span className="text-sm font-bold text-gray-900">{currentOrder.customer.name}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-600">Metode Bayar</span>
+                                    <span className="text-sm font-bold text-gray-900">
+                                        {currentOrder.payment_method === 'cash' ? 'Tunai' : 'Transfer'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-300">
+                                    <span className="text-base font-bold text-gray-900">Total</span>
+                                    <span className="text-lg font-bold text-green-600">
+                                        {formatCurrency(currentOrder.total_amount)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Upload Bukti Pembayaran */}
+                            <div className="bg-green-50 p-4 rounded-xl border-2 border-green-200">
+                                <label className="block text-sm font-bold text-green-800 mb-2">
+                                    Upload Bukti Pembayaran *
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setPaymentProofFile(file);
+
+                                            // Create preview for images
+                                            if (file.type.startsWith('image/')) {
+                                                const reader = new FileReader();
+                                                reader.onload = (e) => setPaymentProofPreview(e.target?.result as string);
+                                                reader.readAsDataURL(file);
+                                            } else {
+                                                setPaymentProofPreview(null);
+                                            }
+                                        }
+                                    }}
+                                    className="w-full px-3 py-2 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm"
+                                />
+                                <p className="text-xs text-gray-600 mt-1">
+                                    Format: JPG, PNG, PDF (Max 5MB)
+                                </p>
+
+                                {/* Preview */}
+                                {paymentProofPreview && (
+                                    <div className="mt-3">
+                                        <img
+                                            src={paymentProofPreview}
+                                            alt="Preview Bukti"
+                                            className="max-w-full h-40 object-contain rounded-lg border-2 border-green-300 mx-auto"
+                                        />
+                                    </div>
+                                )}
+
+                                {paymentProofFile && !paymentProofPreview && (
+                                    <div className="mt-3 bg-white rounded-lg p-3 border border-green-300">
+                                        <p className="text-sm text-gray-700">
+                                            📄 {paymentProofFile.name}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Buttons */}
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowConfirmPayment(false);
+                                        setPaymentProofFile(null);
+                                        setPaymentProofPreview(null);
+                                    }}
+                                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-xl transition-colors"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (!paymentProofFile) {
+                                            alert('Silakan upload bukti pembayaran terlebih dahulu');
+                                            return;
+                                        }
+
+                                        // TODO: Implement upload logic with file
+                                        await handleMarkAsPaid();
+                                        setPaymentProofFile(null);
+                                        setPaymentProofPreview(null);
+                                    }}
+                                    disabled={isUpdatingStatus || !paymentProofFile}
+                                    className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isUpdatingStatus ? 'Processing...' : 'Konfirmasi Lunas'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Invoice Print Preview - Hidden on screen, visible on print */}
+            {showInvoice && (
+                <div className="fixed inset-0 bg-white z-[100] overflow-auto print-only">
+                    <Invoice order={currentOrder} />
+                </div>
+            )}
+
+            {/* CSS Animations */}
+            <style>{`
+                @keyframes fadeInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                @keyframes fadeIn {
+                    from {
+                        opacity: 0;
+                    }
+                    to {
+                        opacity: 1;
+                    }
+                }
+                @keyframes scaleIn {
+                    from {
+                        opacity: 0;
+                        transform: scale(0.95);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                }
+                .animate-fadeInUp {
+                    animation: fadeInUp 0.3s ease-out forwards;
+                }
+                .animate-fadeIn {
+                    animation: fadeIn 0.2s ease-out forwards;
+                }
+                .animate-scaleIn {
+                    animation: scaleIn 0.2s ease-out forwards;
+                }
+            `}</style>
         </div>
     );
 };

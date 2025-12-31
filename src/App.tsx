@@ -13,6 +13,7 @@ import Profile from './components/profile/Profile';
 import ServicesIndex from './components/services/servicesIndex';
 import ProcessIndex from './components/process/ProcessIndex';
 import { authService } from './services/authService';
+import TransactionHistory from './components/history/TransactionHistory';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -53,6 +54,7 @@ const App: React.FC = () => {
                 <Routes>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  {/* <Route path="/history" element={<TransactionHistory/>} /> */}
                   <Route path="/customers" element={<CustomerIndex />} />
                   <Route path="/orders" element={<OrderIndex />} />
                   <Route path="/orders/create" element={<CreateOrder />} />

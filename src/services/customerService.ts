@@ -10,7 +10,7 @@ const api = axios.create({
         'Content-Type': 'application/json',
         'Accept': 'application/json',
     },
-    // withCredentials: true,
+    withCredentials: true,
 });
 
 // api.interceptors.response.use(

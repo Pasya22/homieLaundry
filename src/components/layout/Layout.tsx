@@ -1,6 +1,6 @@
 // src/components/layout/Layout.tsx
 import React, { useState, useEffect } from 'react';
-import { Home, ShoppingBag, RefreshCw, Tag, Users, Download, CloudOff, LogOut, User, ChevronDown } from 'lucide-react';
+import { Home, ShoppingBag, RefreshCw, Tag, Users, Download, CloudOff, LogOut, User, ChevronDown, NotebookText } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
 
@@ -82,26 +82,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
-  const NavItem = ({ 
-    icon: Icon, 
-    label, 
-    to 
-  }: { 
-    icon: React.ElementType; 
-    label: string; 
-    to: string; 
+  const NavItem = ({
+    icon: Icon,
+    label,
+    to
+  }: {
+    icon: React.ElementType;
+    label: string;
+    to: string;
   }) => {
-    const isActive = location.pathname === to || 
-                    (to === '/dashboard' && location.pathname === '/');
-    
+    const isActive = location.pathname === to ||
+      (to === '/dashboard' && location.pathname === '/');
+
     return (
       <Link
         to={to}
-        className={`flex flex-col items-center justify-center w-16 ${
-          isActive 
-            ? 'text-blue-500' 
-            : 'text-gray-500 hover:text-blue-500'
-        } transition duration-200`}
+        className={`flex flex-col items-center justify-center w-16 ${isActive
+          ? 'text-blue-500'
+          : 'text-gray-500 hover:text-blue-500'
+          } transition duration-200`}
       >
         <Icon className={`w-6 h-6 ${isActive ? 'stroke-blue-500' : 'stroke-gray-500'}`} />
         <span className="text-xs mt-1">{label}</span>
@@ -116,14 +115,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
-                <ShoppingBag className="w-6 h-6 text-white" />
-              </div>
-              <Link to="/dashboard" className="text-xl font-bold text-blue-700 hover:opacity-80 transition-opacity">
+              {/* <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md"> */}
+              {/* <ShoppingBag className="w-6 h-6 text-white" /> */}
+              <img src="../../../public/Logo-min-asli.png" alt="" className="w-12 h-12 " />
+              {/* </div> */}
+              <Link to="/dashboard" className="text-xl font-bold bg-gradient-to-r from-sky-600 to-sky-800 hover:opacity-80 text-transparent bg-clip-text">
                 Homie Laundry
               </Link>
             </div>
-            
+
             <div className="flex items-center gap-2">
               {/* Offline Indicator */}
               {isOffline && (
@@ -132,7 +132,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   Offline
                 </span>
               )}
-              
+
               {/* Install Button */}
               {isInstallable && (
                 <button
@@ -144,7 +144,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   Install
                 </button>
               )}
-              
+
               {/* Live Indicator */}
               {!isOffline && (
                 <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center gap-1">
@@ -152,7 +152,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   Live
                 </span>
               )}
-              
+
               {/* User Menu */}
               <div className="relative user-menu-container">
                 <button
@@ -170,7 +170,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
                 {/* Dropdown Menu */}
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-60">
                     {/* User Info */}
                     <div className="px-4 py-3 border-b border-gray-200">
                       <div className="flex items-center gap-3">
@@ -194,7 +194,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         <User className="w-4 h-4 text-gray-500" />
                         <span>Profile Saya</span>
                       </Link>
-                      
+
                       <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition duration-200"
@@ -235,6 +235,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 shadow-lg">
         <div className="flex justify-around items-center h-16">
           <NavItem icon={Home} label="Home" to="/dashboard" />
+          {/* <NavItem icon={NotebookText} label="History" to="/history" /> */}
           <NavItem icon={ShoppingBag} label="Transaksi" to="/orders" />
           <NavItem icon={RefreshCw} label="Proses" to="/process" />
           <NavItem icon={Tag} label="Harga" to="/services" />

@@ -1,15 +1,14 @@
 // src/services/orderService.ts
 import axios from 'axios';
-import { 
-    type Order, 
-    type CreateOrderData, 
-    type OrderStats, 
-    type Customer, 
+import {
+    type Order,
+    type CreateOrderData,
+    type OrderStats,
     type Service,
-    type OrderStatus 
+    type OrderStatus
 } from '../types/order';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL ;
+import type { Customer } from '../types/customer';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -20,79 +19,7 @@ const api = axios.create({
     withCredentials: true,
 });
 
-// Mock data untuk development
-const mockCustomers: Customer[] = [
-    {
-        id: 1,
-        name: 'Budi Santoso',
-        phone: '08123456789',
-        address: 'Jl. Merdeka No. 123, Jakarta',
-        type: 'member',
-        balance: 50000,
-        member_since: '2024-01-15',
-        member_expiry: '2025-01-15',
-        member_status: 'active',
-    },
-    {
-        id: 2,
-        name: 'Siti Nurhaliza',
-        phone: '08129876543',
-        address: 'Jl. Sudirman No. 456, Bandung',
-        type: 'regular',
-        balance: 0,
-        member_since: null,
-        member_expiry: null,
-        member_status: 'inactive',
-    },
-];
-
-const mockServices: Service[] = [
-    {
-        id: 1,
-        name: 'Cuci Setrika Reguler',
-        description: 'Cuci dan setrika pakaian',
-        price: 7000,
-        member_price: 6000,
-        category: 'Cuci Setrika',
-        duration: '24 jam',
-        is_weight_based: true,
-        is_active: true,
-    },
-    {
-        id: 2,
-        name: 'Cuci Kering',
-        description: 'Cuci saja tanpa setrika',
-        price: 5000,
-        member_price: 4500,
-        category: 'Cuci Kering',
-        duration: '24 jam',
-        is_weight_based: true,
-        is_active: true,
-    },
-    {
-        id: 3,
-        name: 'Setrika Saja',
-        description: 'Setrika pakaian yang sudah kering',
-        price: 4000,
-        member_price: 3500,
-        category: 'Setrika',
-        duration: '12 jam',
-        is_weight_based: true,
-        is_active: true,
-    },
-    {
-        id: 4,
-        name: 'Dry Cleaning Jas',
-        description: 'Dry cleaning khusus jas',
-        price: 30000,
-        member_price: 25000,
-        category: 'Khusus',
-        duration: '48 jam',
-        is_weight_based: false,
-        is_active: true,
-        size: 'Satuan',
-    },
-];
+// Remove all mock data - we'll use real API calls
 
 export const orderService = {
     // Order List
@@ -103,263 +30,245 @@ export const orderService = {
         page?: number;
         perPage?: number;
     }): Promise<{ data: Order[]; total: number }> {
-        if (import.meta.env.DEV && !API_BASE_URL.includes('localhost:8000')) {
-            console.log('Using mock orders data');
-            // Generate mock orders
-            const mockOrders: Order[] = Array.from({ length: 10 }, (_, i) => ({
-                id: i + 1,
-                order_number: `HL-2024${String(i + 1).padStart(3, '0')}`,
-                customer_id: (i % 2) + 1,
-                customer: mockCustomers[i % 2],
-                order_date: new Date().toISOString(),
-                status: ['request', 'washing', 'drying', 'ironing', 'ready', 'completed'][i % 6] as OrderStatus,
-                payment_status: i % 3 === 0 ? 'paid' : 'pending',
-                payment_method: i % 2 === 0 ? 'cash' : 'transfer',
-                total_amount: 50000 + (i * 15000),
-                weight: i % 3 === 0 ? 2.5 : null,
-                total_items: 3 + i,
-                notes: i % 2 === 0 ? 'Catatan khusus untuk order ini' : '',
-                estimated_completion: new Date(Date.now() + 86400000).toISOString(),
-                created_at: new Date().toISOString(),
-                order_items: mockServices.slice(0, 2).map(service => ({
-                    id: service.id + i * 10,
-                    service_id: service.id,
-                    quantity: i % 3 === 0 ? 2 : 1,
-                    weight: service.is_weight_based ? 1.5 : null,
-                    unit_price: service.price,
-                    subtotal: service.price * (service.is_weight_based ? 1.5 : 1),
-                    notes: '',
-                    service
-                }))
-            }));
-            
-            return { 
-                data: mockOrders.filter(order => {
-                    if (params?.status && order.status !== params.status) return false;
-                    if (params?.search && !order.order_number.includes(params.search)) return false;
-                    return true;
-                }),
-                total: 10 
-            };
-        }
-        
         try {
             const response = await api.get('/orders', { params });
-            return response.data;
-        } catch (error) {
+            return {
+                data: response.data.data || [],
+                total: response.data.meta?.total || response.data.data?.length || 0
+            };
+        } catch (error: any) {
             console.error('Error fetching orders:', error);
-            throw error;
+
+            // Return empty data for development if API is not ready
+            if (import.meta.env.DEV) {
+                console.warn('API not available, returning empty orders');
+                return { data: [], total: 0 };
+            }
+
+            throw new Error(error.response?.data?.message || 'Gagal mengambil data order');
         }
     },
 
     async getOrderStats(dateFilter?: string): Promise<OrderStats> {
-        if (import.meta.env.DEV && !API_BASE_URL.includes('localhost:8000')) {
-            console.log('Using mock order stats');
-            return {
-                total: 15,
-                revenue: 750000,
-                completed: 8,
-            };
-        }
-        
         try {
-            const response = await api.get('/orders/stats', { params: { date_filter: dateFilter } });
-            return response.data.data;
-        } catch (error) {
+            const response = await api.get('/orders/stats', {
+                params: { date_filter: dateFilter }
+            });
+            return response.data.data || {
+                total: 0,
+                revenue: 0,
+                completed: 0,
+            };
+        } catch (error: any) {
             console.error('Error fetching order stats:', error);
-            throw error;
+
+            // Return default stats for development
+            if (import.meta.env.DEV) {
+                console.warn('API not available, returning default stats');
+                return {
+                    total: 0,
+                    revenue: 0,
+                    completed: 0,
+                };
+            }
+
+            throw new Error(error.response?.data?.message || 'Gagal mengambil statistik order');
         }
     },
 
     // Order Detail
     async getOrder(id: number): Promise<Order> {
-        if (import.meta.env.DEV && !API_BASE_URL.includes('localhost:8000')) {
-            console.log('Using mock order detail');
-            const mockOrder: Order = {
-                id,
-                order_number: `HL-2024${String(id).padStart(3, '0')}`,
-                customer_id: id % 2 + 1,
-                customer: mockCustomers[id % 2],
-                order_date: new Date().toISOString(),
-                status: 'washing',
-                payment_status: 'pending',
-                payment_method: 'cash',
-                total_amount: 85000,
-                weight: 3.5,
-                total_items: 5,
-                notes: 'Mohon di setrika dengan baik',
-                estimated_completion: new Date(Date.now() + 172800000).toISOString(),
-                created_at: new Date().toISOString(),
-                order_items: mockServices.map(service => ({
-                    id: service.id + id * 10,
-                    service_id: service.id,
-                    quantity: 2,
-                    weight: service.is_weight_based ? 1.5 : null,
-                    unit_price: service.price,
-                    subtotal: service.price * (service.is_weight_based ? 1.5 : 2),
-                    notes: service.id === 4 ? 'Jas hitam' : '',
-                    service
-                }))
-            };
-            return mockOrder;
-        }
-        
         try {
             const response = await api.get(`/orders/${id}`);
             return response.data.data;
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching order:', error);
-            throw error;
+            throw new Error(error.response?.data?.message || 'Gagal mengambil detail order');
         }
     },
 
     // Create Order
     async createOrder(data: CreateOrderData): Promise<Order> {
-        if (import.meta.env.DEV && !API_BASE_URL.includes('localhost:8000')) {
-            console.log('Creating mock order:', data);
-            const newOrder: Order = {
-                id: Math.floor(Math.random() * 1000) + 100,
-                order_number: `HL-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 1000)}`,
-                customer_id: data.customer_id || 1,
-                customer: data.customer ? {
-                    id: 0,
-                    name: data.customer.name,
-                    phone: data.customer.phone,
-                    address: data.customer.address,
-                    type: data.customer.type,
-                    balance: data.customer.deposit,
-                    member_since: new Date().toISOString(),
-                    member_expiry: new Date(Date.now() + 31536000000).toISOString(),
-                    member_status: data.customer.type === 'member' ? 'active' : 'inactive',
-                } : mockCustomers[0],
-                order_date: new Date().toISOString(),
-                status: 'request',
-                payment_status: data.payment_method === 'cash' ? 'paid' : 'pending',
-                payment_method: data.payment_method,
-                total_amount: data.items.reduce((total, item) => {
-                    const service = mockServices.find(s => s.id === item.service_id);
-                    if (!service) return total;
-                    if (service.is_weight_based) {
-                        return total + (service.price * (item.weight || 1));
-                    }
-                    return total + (service.price * item.quantity);
-                }, 0),
-                weight: data.items.reduce((total, item) => {
-                    const service = mockServices.find(s => s.id === item.service_id);
-                    if (!service || !service.is_weight_based) return total;
-                    return total + (item.weight || 1);
-                }, 0),
-                total_items: data.items.reduce((total, item) => total + item.quantity, 0),
-                notes: data.order_notes,
-                estimated_completion: data.estimated_completion,
-                created_at: new Date().toISOString(),
-                order_items: data.items.map(item => {
-                    const service = mockServices.find(s => s.id === item.service_id)!;
-                    return {
-                        id: service.id + Math.floor(Math.random() * 1000),
-                        service_id: service.id,
-                        quantity: item.quantity,
-                        weight: service.is_weight_based ? item.weight || 1 : null,
-                        unit_price: service.price,
-                        subtotal: service.is_weight_based ? service.price * (item.weight || 1) : service.price * item.quantity,
-                        notes: item.notes,
-                        service
-                    };
-                })
-            };
-            return newOrder;
-        }
-        
         try {
-            const response = await api.post('/orders', data);
+            const formData = new FormData();
+
+            // Append JSON data
+            const jsonData = {
+                customer_id: data.customer_id,
+                customer: data.customer,
+                items: data.items,
+                order_notes: data.order_notes,
+                payment_method: data.payment_method,
+                payment_confirmation: data.payment_confirmation,
+                estimated_completion: data.estimated_completion,
+            };
+
+            formData.append('data', JSON.stringify(jsonData));
+
+            // Append file if exists
+            if (data.payment_proof) {
+                formData.append('payment_proof', data.payment_proof);
+            }
+
+            const response = await api.post('/orders', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
             return response.data.data;
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating order:', error);
-            throw error;
+
+            if (error.response?.data?.errors) {
+                const errors = error.response.data.errors;
+                const errorMessages = Object.values(errors).flat().join(', ');
+                throw new Error(`Validasi gagal: ${errorMessages}`);
+            }
+
+            throw new Error(error.response?.data?.message || 'Gagal membuat order');
         }
     },
-
     // Update Order Status
     async updateOrderStatus(id: number, status: OrderStatus): Promise<Order> {
-        if (import.meta.env.DEV && !API_BASE_URL.includes('localhost:8000')) {
-            console.log('Updating mock order status:', { id, status });
-            const order = await this.getOrder(id);
-            return { ...order, status };
-        }
-        
         try {
             const response = await api.patch(`/orders/${id}/status`, { status });
             return response.data.data;
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error updating order status:', error);
-            throw error;
+            throw new Error(error.response?.data?.message || 'Gagal mengupdate status order');
         }
     },
 
     // Update Payment Status
-    async updatePaymentStatus(id: number, paymentStatus: 'paid' | 'pending'): Promise<Order> {
-        if (import.meta.env.DEV && !API_BASE_URL.includes('localhost:8000')) {
-            console.log('Updating mock payment status:', { id, paymentStatus });
-            const order = await this.getOrder(id);
-            return { ...order, payment_status: paymentStatus };
+    updatePaymentStatus: async (id: number, paymentStatus: 'paid' | 'pending', paymentProof?: File) => {
+        const formData = new FormData();
+        formData.append('payment_status', paymentStatus);
+
+        if (paymentProof) {
+            formData.append('payment_proof', paymentProof);
         }
-        
-        try {
-            const response = await api.patch(`/orders/${id}/payment`, { payment_status: paymentStatus });
-            return response.data.data;
-        } catch (error) {
-            console.error('Error updating payment status:', error);
-            throw error;
-        }
+
+        const response = await api.post(`/orders/${id}/payment-status`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data.data;
     },
 
+    // Get payment proof URL
+    getPaymentProof: async (id: number) => {
+        const response = await api.get(`/orders/${id}/payment-proof`);
+        return response.data.data;
+    },
+
+    // Download payment proof
+    downloadPaymentProof: async (id: number) => {
+        const response = await api.get(`/orders/${id}/payment-proof/download`, {
+            responseType: 'blob',
+        });
+
+        // Create download link
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `payment_proof_${id}.jpg`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    },
     // Delete Order
     async deleteOrder(id: number): Promise<void> {
-        if (import.meta.env.DEV && !API_BASE_URL.includes('localhost:8000')) {
-            console.log('Deleting mock order:', id);
-            return;
-        }
-        
         try {
             await api.delete(`/orders/${id}`);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error deleting order:', error);
-            throw error;
+            throw new Error(error.response?.data?.message || 'Gagal menghapus order');
         }
     },
 
     // Customer Search
     async searchCustomers(search: string): Promise<Customer[]> {
-        if (import.meta.env.DEV && !API_BASE_URL.includes('localhost:8000')) {
-            console.log('Searching mock customers:', search);
-            return mockCustomers.filter(customer => 
-                customer.name.toLowerCase().includes(search.toLowerCase()) ||
-                customer.phone?.includes(search)
-            );
-        }
-        
         try {
-            const response = await api.get('/orders/search', { params: { search } });
-            return response.data.data;
-        } catch (error) {
+            const response = await api.get('/orders/search', {
+                params: { q: search }
+            });
+            return response.data.data || [];
+        } catch (error: any) {
             console.error('Error searching customers:', error);
-            throw error;
+
+            // Return empty array for development
+            if (import.meta.env.DEV) {
+                console.warn('Customer search API not available, returning empty array');
+                return [];
+            }
+
+            throw new Error(error.response?.data?.message || 'Gagal mencari pelanggan');
         }
     },
 
     // Get Services
     async getServices(): Promise<Service[]> {
-        if (import.meta.env.DEV && !API_BASE_URL.includes('localhost:8000')) {
-            console.log('Using mock services');
-            return mockServices;
-        }
-        
         try {
             const response = await api.get('/services');
-            return response.data.data;
-        } catch (error) {
+            return response.data.data || [];
+        } catch (error: any) {
             console.error('Error fetching services:', error);
+
+            // Return default services for development
+
+            throw new Error(error.response?.data?.message || 'Gagal mengambil data layanan');
+        }
+    },
+
+    // Get Customer by ID
+    async getCustomer(id: number): Promise<Customer> {
+        try {
+            const response = await api.get(`/customers/${id}`);
+            return response.data.data;
+        } catch (error: any) {
+            console.error('Error fetching customer:', error);
+            throw new Error(error.response?.data?.message || 'Gagal mengambil data pelanggan');
+        }
+    },
+
+    // Create Customer
+    async createCustomer(data: {
+        name: string;
+        phone: string;
+        address: string;
+        type: 'regular' | 'member';
+        deposit?: number;
+    }): Promise<Customer> {
+        try {
+            const response = await api.post('/customers', data);
+            return response.data.data;
+        } catch (error: any) {
+            console.error('Error creating customer:', error);
+            throw new Error(error.response?.data?.message || 'Gagal membuat pelanggan baru');
+        }
+    },
+
+    // Get order by status
+    async getOrdersByStatus(status: OrderStatus): Promise<Order[]> {
+        try {
+            const response = await api.get('/orders', { params: { status } });
+            return response.data.data || [];
+        } catch (error: any) {
+            console.error('Error fetching orders by status:', error);
             throw error;
         }
     },
-}
+
+    // Get today's orders
+    async getTodayOrders(): Promise<Order[]> {
+        try {
+            const response = await api.get('/orders/today');
+            return response.data.data || [];
+        } catch (error: any) {
+            console.error('Error fetching today\'s orders:', error);
+            throw error;
+        }
+    },
+};
