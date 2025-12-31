@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
     History, Search, Filter, Download, 
     ArrowUpCircle, ArrowDownCircle, Wallet,
-    User, Calendar, DollarSign, FileText,
+    User, Calendar, FileText,
     TrendingUp, TrendingDown
 } from 'lucide-react';
 

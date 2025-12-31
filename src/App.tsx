@@ -13,7 +13,7 @@ import Profile from './components/profile/Profile';
 import ServicesIndex from './components/services/servicesIndex';
 import ProcessIndex from './components/process/ProcessIndex';
 import { authService } from './services/authService';
-import TransactionHistory from './components/history/TransactionHistory';
+// import TransactionHistory from './components/history/TransactionHistory';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {

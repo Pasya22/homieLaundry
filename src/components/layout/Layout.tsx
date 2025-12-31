@@ -1,6 +1,6 @@
 // src/components/layout/Layout.tsx
 import React, { useState, useEffect } from 'react';
-import { Home, ShoppingBag, RefreshCw, Tag, Users, Download, CloudOff, LogOut, User, ChevronDown, NotebookText } from 'lucide-react';
+import { Home, ShoppingBag, RefreshCw, Tag, Users, Download, CloudOff, LogOut, User, ChevronDown } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
 

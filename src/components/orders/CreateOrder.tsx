@@ -52,7 +52,7 @@ const CreateOrder = () => {
 
     const [showPaymentProofForm, setShowPaymentProofForm] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
+    console.log(showPaymentProofForm);
     const navigate = useNavigate();
 
     useEffect(() => {
