@@ -64,22 +64,22 @@ const ServicesIndex: React.FC = () => {
 
     useEffect(() => {
         let filtered = services;
-        
+
         // Filter by category
         if (selectedCategory) {
             filtered = filtered.filter(s => s.category === selectedCategory);
         }
-        
+
         // Filter by search term
         if (searchTerm.trim()) {
             const term = searchTerm.toLowerCase();
-            filtered = filtered.filter(s => 
+            filtered = filtered.filter(s =>
                 s.name.toLowerCase().includes(term) ||
                 s.description?.toLowerCase().includes(term) ||
                 s.category.toLowerCase().includes(term)
             );
         }
-        
+
         setFilteredServices(filtered);
     }, [services, selectedCategory, searchTerm]);
 
@@ -217,8 +217,8 @@ const ServicesIndex: React.FC = () => {
                     <button
                         onClick={() => setSelectedCategory('')}
                         className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 filter-button ${!selectedCategory
-                                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg'
-                                : 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200'
+                            ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg'
+                            : 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200'
                             }`}
                     >
                         Semua
@@ -228,8 +228,8 @@ const ServicesIndex: React.FC = () => {
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
                             className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 filter-button ${selectedCategory === cat
-                                    ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg'
-                                    : 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200'
+                                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg'
+                                : 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200'
                                 }`}
                         >
                             {cat}
@@ -262,7 +262,7 @@ const ServicesIndex: React.FC = () => {
             {/* Mobile Filter Drawer */}
             {showFilterDrawer && (
                 <div className="md:hidden fixed inset-0 z-40">
-                    <div 
+                    <div
                         className="absolute inset-0 bg-black bg-opacity-50"
                         onClick={() => setShowFilterDrawer(false)}
                     />
@@ -285,8 +285,8 @@ const ServicesIndex: React.FC = () => {
                                     setShowFilterDrawer(false);
                                 }}
                                 className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${!selectedCategory
-                                        ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white'
-                                        : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
+                                    ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white'
+                                    : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
                                     }`}
                             >
                                 Semua ({services.length})
@@ -299,8 +299,8 @@ const ServicesIndex: React.FC = () => {
                                         setShowFilterDrawer(false);
                                     }}
                                     className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${selectedCategory === cat
-                                            ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white'
-                                            : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
+                                        ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white'
+                                        : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
                                         }`}
                                 >
                                     {cat} ({services.filter(s => s.category === cat).length})
@@ -317,8 +317,8 @@ const ServicesIndex: React.FC = () => {
                     <button
                         onClick={() => setSelectedCategory('')}
                         className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 filter-button ${!selectedCategory
-                                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg transform scale-105'
-                                : 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200'
+                            ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg transform scale-105'
+                            : 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200'
                             }`}
                     >
                         Semua ({services.length})
@@ -328,8 +328,8 @@ const ServicesIndex: React.FC = () => {
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
                             className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 filter-button ${selectedCategory === cat
-                                    ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg transform scale-105'
-                                    : 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200'
+                                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg transform scale-105'
+                                : 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200'
                                 }`}
                         >
                             {cat} ({services.filter(s => s.category === cat).length})
@@ -494,8 +494,8 @@ const ServicesIndex: React.FC = () => {
                                 <select
                                     value={formData.category}
                                     onChange={e => {
-                                        setFormData({ 
-                                            ...formData, 
+                                        setFormData({
+                                            ...formData,
                                             category: e.target.value,
                                             size: '' // Reset size when category changes
                                         });
@@ -523,7 +523,15 @@ const ServicesIndex: React.FC = () => {
 
                                 <div>
                                     <label className="block text-sm font-bold text-sky-700 mb-2">Ukuran (opsional)</label>
-                                    <select
+                                    <input
+                                        type="text"
+                                        value={formData.size}
+                                        onChange={e => setFormData({ ...formData, size: e.target.value })}
+                                        className="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-sky-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all duration-200 text-sm md:text-base"
+                                        placeholder="S, M, King dll"
+                                        required
+                                    />
+                                    {/* <select
                                         value={formData.size}
                                         onChange={e => setFormData({ ...formData, size: e.target.value })}
                                         className="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-sky-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all duration-200 text-sm md:text-base"
@@ -531,7 +539,7 @@ const ServicesIndex: React.FC = () => {
                                         {getSizesForCategory(formData.category).map(s => (
                                             <option key={s} value={s}>{s || 'Tidak ada'}</option>
                                         ))}
-                                    </select>
+                                    </select> */}
                                 </div>
                             </div>
 

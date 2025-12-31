@@ -117,7 +117,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="flex items-center gap-3">
               {/* <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md"> */}
               {/* <ShoppingBag className="w-6 h-6 text-white" /> */}
-              <img src="../../../public/Logo-min-asli.png" alt="" className="w-12 h-12 " />
+              <img src="../../..Logo-min-asli.png" alt="" className="w-12 h-12 " />
               {/* </div> */}
               <Link to="/dashboard" className="text-xl font-bold bg-gradient-to-r from-sky-600 to-sky-800 hover:opacity-80 text-transparent bg-clip-text">
                 Homie Laundry
