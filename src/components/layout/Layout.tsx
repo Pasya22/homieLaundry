@@ -1,6 +1,17 @@
 // src/components/layout/Layout.tsx
 import React, { useState, useEffect } from 'react';
-import { Home, ShoppingBag, RefreshCw, Tag, Users, Download, CloudOff, LogOut, User, ChevronDown } from 'lucide-react';
+import {
+  Home,
+  ShoppingBag,
+  RefreshCw,
+  Tag,
+  Users,
+  Download,
+  CloudOff,
+  LogOut,
+  User,
+  ChevronDown,
+} from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
 
@@ -18,11 +29,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
 
   useEffect(() => {
-    // Get user info from localStorage
     const userData = authService.getUser();
     setUser(userData);
 
-    // Check for PWA installability
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -31,14 +40,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Check online status
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Close user menu when clicking outside
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target.closest('.user-menu-container')) {
@@ -71,10 +78,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (window.confirm('Apakah Anda yakin ingin logout?')) {
       try {
         await authService.logout();
-        // authService.logout() will automatically redirect to /login
       } catch (error) {
         console.error('Logout error:', error);
-        // Force redirect even if API call fails
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user');
         navigate('/login');
@@ -85,50 +90,60 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const NavItem = ({
     icon: Icon,
     label,
-    to
+    to,
   }: {
     icon: React.ElementType;
     label: string;
     to: string;
   }) => {
-    const isActive = location.pathname === to ||
+    const isActive =
+      location.pathname === to ||
       (to === '/dashboard' && location.pathname === '/');
 
     return (
       <Link
         to={to}
-        className={`flex flex-col items-center justify-center w-16 ${isActive
-          ? 'text-blue-500'
-          : 'text-gray-500 hover:text-blue-500'
-          } transition duration-200`}
+        className={`flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl transition-all duration-200 ${isActive
+            ? 'bg-gradient-to-br from-sky-500 to-sky-600 text-white shadow-md scale-105'
+            : 'text-sky-600 hover:bg-sky-50 hover:text-sky-700'
+          }`}
       >
-        <Icon className={`w-6 h-6 ${isActive ? 'stroke-blue-500' : 'stroke-gray-500'}`} />
-        <span className="text-xs mt-1">{label}</span>
+        <Icon
+          className={`w-5 h-5 ${isActive ? 'stroke-white' : 'stroke-sky-600'
+            }`}
+        />
+        <span className={`text-[11px] mt-0.5 ${isActive ? 'font-bold' : 'font-semibold'}`}>
+          {label}
+        </span>
       </Link>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-30 border-b">
-        <div className="container mx-auto px-4 py-4">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-white pb-24">
+      {/* Header - Sky Blue Theme */}
+      <header className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-30 border-b-2 border-sky-100">
+        <div className="container mx-auto px-4 py-3.5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md"> */}
-              {/* <ShoppingBag className="w-6 h-6 text-white" /> */}
-              <img src="/Logo-min.png" alt="" className="w-12 h-12 " />
-              {/* </div> */}
-              <Link to="/dashboard" className="text-xl font-bold bg-gradient-to-r from-sky-600 to-sky-800 hover:opacity-80 text-transparent bg-clip-text">
-                Homie Laundry
-              </Link>
-            </div>
+            <Link to="/dashboard" className="flex items-center gap-3 group">
+              <div className="p-1 bg-gradient-to-br from-sky-50 to-sky-100 rounded-xl border border-sky-200 shadow-sm group-hover:shadow transition-all">
+                <img src="/Logo-min.png" alt="Homie Laundry" className="w-10 h-10 object-contain" />
+              </div>
+              <div>
+                <span className="text-xl font-bold bg-gradient-to-r from-sky-600 to-sky-800 group-hover:opacity-85 text-transparent bg-clip-text block leading-tight">
+                  Homie Laundry
+                </span>
+                <span className="text-[11px] font-medium text-sky-500 hidden sm:block">
+                  Sistem Manajemen Laundry
+                </span>
+              </div>
+            </Link>
 
             <div className="flex items-center gap-2">
               {/* Offline Indicator */}
               {isOffline && (
-                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full flex items-center gap-1">
-                  <CloudOff className="w-3 h-3" />
+                <span className="text-xs bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold">
+                  <CloudOff className="w-3.5 h-3.5" />
                   Offline
                 </span>
               )}
@@ -137,19 +152,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               {isInstallable && (
                 <button
                   onClick={handleInstall}
-                  className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full hover:bg-blue-200 transition duration-200 flex items-center gap-1"
+                  className="text-xs bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white px-3 py-1.5 rounded-full shadow-sm hover:shadow transition-all duration-200 flex items-center gap-1.5 font-bold"
                   title="Install Aplikasi"
                 >
-                  <Download className="w-3 h-3" />
-                  Install
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Install</span>
                 </button>
               )}
 
-              {/* Live Indicator */}
+              {/* Online Indicator */}
               {!isOffline && (
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  Live
+                <span className="text-xs bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-full flex items-center gap-1.5 font-bold">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="hidden xs:inline">Online</span>
                 </span>
               )}
 
@@ -157,47 +172,50 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="relative user-menu-container">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 text-sm bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg transition duration-200"
+                  className="flex items-center gap-2 text-sm bg-sky-50 hover:bg-sky-100 border border-sky-200 px-3 py-2 rounded-xl transition-all duration-200 shadow-sm"
                 >
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
+                  <div className="w-6 h-6 bg-gradient-to-br from-sky-400 to-sky-600 rounded-full flex items-center justify-center shadow-sm">
+                    <User className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span className="hidden sm:inline font-medium text-gray-700">
+                  <span className="hidden sm:inline font-bold text-sky-800">
                     {user?.name || 'User'}
                   </span>
-                  <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    className={`w-4 h-4 text-sky-600 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''
+                      }`}
+                  />
                 </button>
 
                 {/* Dropdown Menu */}
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-60">
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border-2 border-sky-100 py-2 z-50 overflow-hidden">
                     {/* User Info */}
-                    <div className="px-4 py-3 border-b border-gray-200">
+                    <div className="px-4 py-3 bg-gradient-to-r from-sky-50 to-white border-b border-sky-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                        <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-sky-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
                           <User className="w-5 h-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 truncate">{user?.name || 'User'}</p>
-                          <p className="text-xs text-gray-500 truncate">{user?.email || 'user@homie.com'}</p>
+                          <p className="font-bold text-sky-900 truncate">{user?.name || 'User'}</p>
+                          <p className="text-xs text-sky-500 truncate">{user?.email || 'user@homie.com'}</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Menu Items */}
-                    <div className="py-1">
+                    <div className="p-1.5 space-y-1">
                       <Link
                         to="/profile"
                         onClick={() => setShowUserMenu(false)}
-                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition duration-200"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-sky-800 hover:bg-sky-50 transition-colors duration-200"
                       >
-                        <User className="w-4 h-4 text-gray-500" />
+                        <User className="w-4 h-4 text-sky-500" />
                         <span>Profile Saya</span>
                       </Link>
 
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition duration-200"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors duration-200"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>Logout</span>
@@ -205,8 +223,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </div>
 
                     {/* App Info */}
-                    <div className="px-4 py-2 border-t border-gray-200 mt-1">
-                      <p className="text-xs text-gray-500 text-center">
+                    <div className="px-4 py-2 bg-sky-50/60 border-t border-sky-100">
+                      <p className="text-[11px] font-medium text-sky-500 text-center">
                         Homie Laundry v1.0.0
                       </p>
                     </div>
@@ -225,17 +243,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Offline Warning */}
       {isOffline && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg shadow-lg z-40 flex items-center gap-2 animate-fade-in">
-          <CloudOff className="w-4 h-4" />
-          <span className="text-sm font-medium">Anda sedang offline</span>
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-amber-50 border-2 border-amber-200 text-amber-800 px-4 py-2 rounded-2xl shadow-lg z-40 flex items-center gap-2">
+          <CloudOff className="w-4 h-4 text-amber-600" />
+          <span className="text-sm font-bold">Anda sedang offline</span>
         </div>
       )}
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 shadow-lg">
-        <div className="flex justify-around items-center h-16">
+      {/* Bottom Navigation - Sky Blue Theme */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t-2 border-sky-100 z-40 shadow-lg">
+        <div className="max-w-2xl mx-auto flex justify-around items-center h-16 px-2">
           <NavItem icon={Home} label="Home" to="/dashboard" />
-          {/* <NavItem icon={NotebookText} label="History" to="/history" /> */}
           <NavItem icon={ShoppingBag} label="Transaksi" to="/orders" />
           <NavItem icon={RefreshCw} label="Proses" to="/process" />
           <NavItem icon={Tag} label="Harga" to="/services" />
