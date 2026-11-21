@@ -25,10 +25,8 @@ export interface DashboardStore {
     recentOrders: Order[];
     loading: boolean;
     error: string | null;
-    refreshInterval: number | null; // Changed from NodeJS.Timeout
+    lastFetched: number | null;
 
     // Actions
-    fetchDashboardData: () => Promise<void>;
-    startPolling: () => void;
-    stopPolling: () => void;
+    fetchDashboardData: (force?: boolean) => Promise<void>;
 }

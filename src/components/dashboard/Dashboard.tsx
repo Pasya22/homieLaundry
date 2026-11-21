@@ -1,5 +1,4 @@
-// src/components/dashboard/Dashboard.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
     Home,
     PlusCircle,
@@ -13,7 +12,7 @@ import {
     Clock,
     AlertCircle,
     TrendingUp,
-    ChevronRight
+    ChevronRight,
 } from 'lucide-react';
 import { useDashboardStore } from '../../store/dashboardStore';
 import { Link } from 'react-router-dom';
@@ -25,23 +24,11 @@ const Dashboard: React.FC = () => {
         loading,
         error,
         fetchDashboardData,
-        startPolling,
-        stopPolling,
     } = useDashboardStore();
 
-    const [isMounted, setIsMounted] = useState(false);
-
     useEffect(() => {
-        console.log('Dashboard mounted, fetching data...');
-        setIsMounted(true);
         fetchDashboardData();
-        startPolling();
-
-        return () => {
-            console.log('Dashboard unmounting, stopping polling...');
-            stopPolling();
-        };
-    }, []);
+    }, [fetchDashboardData]);
 
     const formatCurrency = (amount: number) => {
         if (amount >= 1000000) {
@@ -61,36 +48,27 @@ const Dashboard: React.FC = () => {
 
     const getStatusBadge = (status: string) => {
         const badges: Record<string, string> = {
-            'request': 'bg-sky-100 text-sky-800 border-sky-200',
-            'washing': 'bg-amber-100 text-amber-800 border-amber-200',
-            'drying': 'bg-orange-100 text-orange-800 border-orange-200',
-            'ironing': 'bg-purple-100 text-purple-800 border-purple-200',
-            'ready': 'bg-green-100 text-green-800 border-green-200',
-            'completed': 'bg-green-100 text-green-800 border-green-200',
+            request: 'bg-sky-100 text-sky-800 border-sky-200',
+            washing: 'bg-amber-100 text-amber-800 border-amber-200',
+            drying: 'bg-orange-100 text-orange-800 border-orange-200',
+            ironing: 'bg-purple-100 text-purple-800 border-purple-200',
+            ready: 'bg-green-100 text-green-800 border-green-200',
+            completed: 'bg-green-100 text-green-800 border-green-200',
         };
         return badges[status] || 'bg-gray-100 text-gray-800 border-gray-200';
     };
 
     const getStatusText = (status: string) => {
         const texts: Record<string, string> = {
-            'request': 'Baru',
-            'washing': 'Cuci',
-            'drying': 'Kering',
-            'ironing': 'Setrika',
-            'ready': 'Siap',
-            'completed': 'Selesai',
+            request: 'Baru',
+            washing: 'Cuci',
+            drying: 'Kering',
+            ironing: 'Setrika',
+            ready: 'Siap',
+            completed: 'Selesai',
         };
         return texts[status] || 'Baru';
     };
-
-    if (!isMounted) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
-                <div className="w-12 h-12 md:w-16 md:h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="text-sky-600 font-medium text-sm md:text-base">Memuat dashboard...</p>
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-sky-50 to-white p-3 md:p-4 lg:p-6">
@@ -124,10 +102,15 @@ const Dashboard: React.FC = () => {
             <div className="bg-white rounded-2xl shadow-lg p-4 md:p-5 border-2 border-sky-100 mb-4 md:mb-6">
                 <div className="flex justify-between items-center mb-4 border-b-2 border-sky-100 pb-3">
                     <h2 className="text-base md:text-lg font-bold text-sky-700">Statistik Hari Ini</h2>
-                    <div className="text-xs bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 px-2 md:px-3 py-1 md:py-1.5 rounded-full flex items-center gap-1 md:gap-2 border-2 border-green-200 font-bold">
-                        <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-green-500 rounded-full animate-pulse" />
-                        <span className="hidden sm:inline">Live</span>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => fetchDashboardData(true)}
+                        disabled={loading}
+                        className="text-xs bg-gradient-to-r from-sky-50 to-blue-50 hover:from-sky-100 hover:to-blue-100 text-sky-700 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full flex items-center gap-1.5 border-2 border-sky-200 font-bold transition-colors disabled:opacity-60"
+                    >
+                        <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                        <span>{loading ? 'Memuat...' : 'Perbarui'}</span>
+                    </button>
                 </div>
 
                 {loading && stats.todayOrders === 0 ? (
@@ -296,9 +279,9 @@ const Dashboard: React.FC = () => {
                 </div>
             </div>
 
-            {/* Refresh Button - Mobile Bottom Center */}
+            {/* Refresh Button - Mobile Bottom Right */}
             <button
-                onClick={() => fetchDashboardData()}
+                onClick={() => fetchDashboardData(true)}
                 disabled={loading}
                 className="fixed bottom-20 md:bottom-6 right-4 md:right-6 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white p-3 md:p-4 rounded-full shadow-xl transition-all duration-300 z-10 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Refresh data"
